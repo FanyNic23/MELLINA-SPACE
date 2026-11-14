@@ -114,7 +114,8 @@ desafio_nasa/
 │       └── generate_synthetic_data.py # Generador de datos sintéticos con anomalías clínicas
 │
 └── frontend/
-    └── index.html                     # Dashboard HUD interactivo (Gráficas, Test PVT, Contramedidas)
+    ├── index.html                     # Dashboard HUD de la Estación (Gráficas, Telemetría, Prescripción)
+    └── smartwatch.html                # ⌚ Interfaz Smartwatch de muñeca (Dial circular, Swipes, Mini PVT)
 ```
 
 ---
@@ -125,11 +126,12 @@ desafio_nasa/
 El frontend incluye modo autónomo con datos de telemetría precargados:
 1. Clona o descarga el repositorio:
    ```bash
-   git clone https://github.com/TU_USUARIO/A-HAMS.git
-   cd A-HAMS
+   git clone https://github.com/FanyNic23/MELLINA-SPACE.git
+   cd MELLINA-SPACE
    ```
-2. Abre el archivo `frontend/index.html` con cualquier navegador moderno (Google Chrome, Microsoft Edge, Mozilla Firefox).
-3. ¡Listo! Puedes conmutar entre los 4 astronautas, revisar sus gráficas longitudinales de 14 días y realizar el test de reflejos psicomotores en tiempo real.
+2. **Abrir cualquiera de las dos interfaces:**
+   * **Dashboard Hábitat (`frontend/index.html`):** Vista de estación médica para monitoreo de la tripulación completa.
+   * **Smartwatch Astronauta (`frontend/smartwatch.html`):** Vista táctil de muñeca para el astronauta en movimiento (soporta gestos de deslizamiento táctil, alertas acústicas Web Audio y conmutador circular/cuadrado).
 
 ---
 

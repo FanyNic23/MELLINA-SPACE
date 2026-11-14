@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>A-HAMS Watch | Astronaut Bio-Wearable UI (Drag Touch Enabled)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.96); opacity: 0.9; }
+      50% { transform: scale(1.04); opacity: 0.4; }
+      100% { transform: scale(0.96); opacity: 0.9; }
+    }
+    .pulse-alert { animation: pulse-ring 1.8s infinite ease-in-out; }
+    ::-webkit-scrollbar { display: none; }
+
+    /* Estilos para arrastre fluido */
+    .drag-active {
+      cursor: grabbing !important;
+      user-select: none !important;
+    }
+    .carousel-track {
+      display: flex;
+      width: 300%;
+      height: 100%;
+      will-change: transform;
+    }
+    .carousel-panel {
+      width: 33.333333%;
+      height: 100%;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-3 font-sans select-none overflow-x-hidden">
+
+  <!-- BARRA DE CONTROLES EXTERNOS PARA DEMOS Y EVALUADORES -->
+  <header id="external-controls" class="mb-3 flex flex-wrap items-center justify-center gap-2 max-w-xl text-xs font-mono">
+    <a href="index.html" class="px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 flex items-center gap-1 transition shadow-sm">
+      <span>←</span> Estación Hábitat
+    </a>
+    <span class="text-slate-500">|</span>
+    <span class="text-slate-400">Tripulante:</span>
+    <button onclick="setCrew(0)" id="btn-crew-0" class="px-2.5 py-1 rounded bg-slate-800 text-emerald-400 border border-emerald-700/60 font-bold">Elena</button>
+    <button onclick="setCrew(1)" id="btn-crew-1" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Marcus</button>
+    <button onclick="setCrew(2)" id="btn-crew-2" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Kenji</button>
+    <button onclick="setCrew(3)" id="btn-crew-3" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Sarah</button>
+    <span class="text-slate-500">|</span>
+    <button onclick="toggleWatchForm()" id="btn-shape" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+      Forma: Circular
+    </button>
+  </header>
+
+  <!-- CHASIS / MARCO FÍSICO DEL SMARTWATCH (Simulador de muñeca) -->
+  <div id="chassis" class="relative w-[360px] h-[360px] sm:w-[390px] sm:h-[390px] rounded-full p-3 bg-gradient-to-b from-slate-700 via-slate-900 to-slate-950 shadow-2xl shadow-cyan-500/10 border-4 border-slate-600 flex items-center justify-center transition-all duration-300">
+    
+    <!-- Bisel interior con textura sutil -->
+    <div id="bezel-ring" class="absolute inset-1.5 rounded-full border border-slate-800 pointer-events-none transition-all duration-300"></div>
+
+    <!-- PANTALLA TÁCTIL OLED (Receptora de gestos Drag Touch en tiempo real) -->
+    <div id="watch-screen" class="relative w-full h-full rounded-full bg-black overflow-hidden flex flex-col justify-between p-4 text-center border-2 border-slate-900 transition-all duration-300 cursor-grab">
+      
+      <!-- INDICADOR SUPERIOR HUD (Hora, Batería, Estado Edge) -->
+      <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1 px-4 z-20 pointer-events-none">
+        <span id="watch-time" class="font-bold">14:32</span>
+        <div class="flex items-center gap-1.5">
+          <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-[9px] text-slate-500 font-semibold">100% EDGE</span>
+        </div>
+        <span id="astro-initials" class="text-cyan-400 font-bold">ER</span>
+      </div>
+
+      <!-- CONTENEDOR DE PANTALLAS CON DRAG TOUCH FLUIDO 1:1 -->
+      <div id="touch-viewport" class="relative flex-1 w-full overflow-hidden my-auto select-none">
+        
+        <!-- PISTA DE ARRASTRE HORIZONTAL (CAROUSEL TRACK) -->
+        <div id="carousel-track" class="carousel-track">
+          
+          <!-- ================= PANEL 0: CARÁTULA GLANCE (SIGNOS VITALES) ================= -->
+          <div class="carousel-panel">
+            <!-- ANILLO SVG DINÁMICO SEWS -->
+            <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="42" stroke="#1e293b" stroke-width="8" fill="transparent" />
+                <circle id="sews-ring" cx="50" cy="50" r="42" stroke="#10b981" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="230" stroke-linecap="round" fill="transparent" class="transition-all duration-700" />
+              </svg>
+              <div class="absolute flex flex-col items-center">
+                <span class="text-[9px] font-mono text-slate-400 uppercase">SEWS</span>
+                <span id="watch-sews" class="text-2xl font-black text-emerald-400 leading-none">02</span>
+                <span id="watch-status" class="text-[9px] font-bold text-emerald-400 tracking-wider">NOMINAL</span>
+              </div>
+            </div>
+
+            <!-- TRIO DE INDICADORES RÁPIDOS -->
+            <div class="grid grid-cols-3 gap-1.5 w-full px-2 pt-1.5 pointer-events-none">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
+                <div class="text-[9px] text-slate-500 font-mono">PULSO</div>
+                <div id="watch-hr" class="text-xs font-bold text-cyan-300">64 bpm</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
+                <div class="text-[9px] text-slate-500 font-mono">HRV</div>
+                <div id="watch-hrv" class="text-xs font-bold text-slate-200">55 ms</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
+                <div class="text-[9px] text-slate-500 font-mono">RAD</div>
+                <div id="watch-rad" class="text-xs font-bold text-slate-200">24 μSv</div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 text-[9px] text-slate-500 font-mono pt-1 pointer-events-none">
+              <span>← Arrastra con ratón o dedo →</span>
+            </div>
+          </div>
+
+          <!-- ================= PANEL 1: CONTRAMEDIDA URGENTE ================= -->
+          <div class="carousel-panel space-y-2">
+            <div id="action-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-950 border border-cyan-800 text-cyan-300">
+              CONTRAMEDIDA DISPONIBLE
+            </div>
+            <h3 id="action-title" class="text-xs font-bold text-white leading-tight px-1">Protocolo Nominal ARED / T2</h3>
+            <p id="action-desc" class="text-[10px] text-slate-300 leading-snug line-clamp-3 px-2">Biomarcadores óptimos. Mantener 2.5h de ejercicio cardiovascular y resistivo.</p>
+            <button onclick="confirmAction(event)" class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-[11px] font-black rounded-full font-mono uppercase tracking-wide transition shadow-lg shadow-cyan-500/20">
+              Confirmar y Ejecutar
+            </button>
+          </div>
+
+          <!-- ================= PANEL 2: TEST PVT DE PULGAR ================= -->
+          <div class="carousel-panel space-y-2">
+            <div class="text-[10px] font-mono text-cyan-400 flex items-center gap-1 justify-center">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> TEST DE VIGILANCIA PVT
+            </div>
+            <div id="watch-pvt-box" onclick="handleWatchPVTClick(event)" class="w-full h-24 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/60 flex flex-col items-center justify-center cursor-pointer transition select-none">
+              <span id="watch-pvt-msg" class="text-[11px] text-slate-400 font-mono text-center px-2">Toca "Iniciar" abajo</span>
+              <span id="watch-pvt-time" class="text-2xl font-black text-emerald-400 hidden font-mono">0 ms</span>
+            </div>
+            <button id="watch-pvt-btn" onclick="startWatchPVT(event)" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 text-[10px] font-bold rounded-full font-mono uppercase">
+              Iniciar Test
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- BARRA DE NAVEGACIÓN INFERIOR (PAGINADOR DE 3 PANTALLAS) -->
+      <div class="flex items-center justify-between px-6 pb-1 z-20 pointer-events-auto">
+        <button onclick="goToPanel(currentPanel - 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">‹</button>
+        <div class="flex items-center gap-2">
+          <button onclick="goToPanel(0)" id="dot-0" class="w-2.5 h-2.5 rounded-full bg-cyan-400 transition-all"></button>
+          <button onclick="goToPanel(1)" id="dot-1" class="w-2 h-2 rounded-full bg-slate-700 transition-all"></button>
+          <button onclick="goToPanel(2)" id="dot-2" class="w-2 h-2 rounded-full bg-slate-700 transition-all"></button>
+        </div>
+        <button onclick="goToPanel(currentPanel + 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">›</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- GUÍA DE ATAJOS Y CONTEXTO -->
+  <footer id="footer-notes" class="text-[11px] text-slate-500 mt-3 text-center max-w-sm space-y-1">
+    <p>🖐️ <span class="text-slate-400 font-bold">Gestos Drag Touch:</span> Haz clic y arrastra con el ratón hacia los lados (o desliza con el dedo en pantallas táctiles) para ver el arrastre físico 1:1.</p>
+    <p>Sonidos hápticos sintetizados con Web Audio API local.</p>
+  </footer>
+
+  <script>
+    // DATOS DE LOS 4 TRIPULANTES
+    const CREW = [
+      {
+        name: "Dra. Elena Rostova", init: "ER", sews: 2, status: "NOMINAL", color: "#10b981", badge: "bg-emerald-950 border-emerald-800 text-emerald-300",
+        hr: 64, hrv: 55, rad: 24,
+        action: { title: "Protocolo Nominal ARED / T2", desc: "Todos los biomarcadores están óptimos. Mantener 2.5h de ejercicio cardiovascular y resistivo." }
+      },
+      {
+        name: "Marcus Vance", init: "MV", sews: 10, status: "CRÍTICO", color: "#f43f5e", badge: "bg-rose-950 border-rose-800 text-rose-300",
+        hr: 79, hrv: 28, rad: 25,
+        action: { title: "Intensificación ARED Excéntrico", desc: "Atrofia muscular acelerada (-6.8%). Realizar 4 series de sentadillas al 85% 1RM + 35g de proteína." }
+      },
+      {
+        name: "Dr. Kenji Sato", init: "KS", sews: 9, status: "CRÍTICO", color: "#f43f5e", badge: "bg-rose-950 border-rose-800 text-rose-300",
+        hr: 74, hrv: 18, rad: 24,
+        action: { title: "Higiene Circadiana & Descanso", desc: "Agotamiento autonómico y 3 lapsos de reflejos. Luz de cabina 2200K ámbar y descanso forzado de 9h." }
+      },
+      {
+        name: "Dra. Sarah Miller", init: "SM", sews: 7, status: "ALERTA", color: "#f59e0b", badge: "bg-amber-950 border-amber-800 text-amber-300",
+        hr: 85, hrv: 36, rad: 89,
+        action: { title: "Refugio por Tormenta Solar (SPE)", desc: "Radiación ambiental crítica (89 μSv/h). Traslado inmediato a la bahía de tormenta blindada con agua." }
+      }
+    ];
+
+    let currentCrew = 0;
+    let currentPanel = 0;
+    const totalPanels = 3;
+    let isCircular = true;
+
+    // MOTOR DE AUDIO HÁPTICO OFFLINE
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioContext = null;
+
+    function playBeep(freq = 880, duration = 0.08, type = 'sine') {
+      try {
+        if (!audioContext) audioContext = new AudioCtx();
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function triggerHaptic(pattern = [80]) {
+      if (navigator.vibrate) navigator.vibrate(pattern);
+    }
+
+    function setCrew(index) {
+      currentCrew = index;
+      const c = CREW[index];
+
+      [0,1,2,3].forEach(i => {
+        const btn = document.getElementById(`btn-crew-${i}`);
+        if (i === index) {
+          btn.className = "px-2.5 py-1 rounded bg-slate-700 text-white border border-cyan-400 font-bold";
+        } else {
+          btn.className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700";
+        }
+      });
+
+      document.getElementById("astro-initials").innerText = c.init;
+      document.getElementById("watch-sews").innerText = c.sews.toString().padStart(2, '0');
+      document.getElementById("watch-status").innerText = c.status;
+      document.getElementById("watch-status").style.color = c.color;
+      document.getElementById("watch-sews").style.color = c.color;
+      document.getElementById("status-dot").style.backgroundColor = c.color;
+
+      const circumference = 264;
+      const progress = Math.min(c.sews / 15, 1);
+      const offset = circumference - (circumference * progress);
+      const ring = document.getElementById("sews-ring");
+      ring.style.strokeDashoffset = offset;
+      ring.style.stroke = c.color;
+
+      document.getElementById("watch-hr").innerText = `${c.hr} bpm`;
+      document.getElementById("watch-hrv").innerText = `${c.hrv} ms`;
+      document.getElementById("watch-rad").innerText = `${c.rad} μSv`;
+
+      document.getElementById("action-title").innerText = c.action.title;
+      document.getElementById("action-desc").innerText = c.action.desc;
+      const badge = document.getElementById("action-badge");
+      badge.className = `px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold border ${c.badge}`;
+
+      if (c.sews >= 8) {
+        playBeep(440, 0.2, 'square');
+        triggerHaptic([150, 80, 150]);
+      } else {
+        playBeep(880, 0.05);
+      }
+    }
+
+    // =========================================================================
+    // IMPLEMENTACIÓN DE DRAG TOUCH FÍSICO 1:1 (TOUCH & MOUSE DRAGGING)
+    // =========================================================================
+    const track = document.getElementById("carousel-track");
+    const watchScreen = document.getElementById("watch-screen");
+
+    let isDragging = false;
+    let startX = 0;
+    let currentDeltaX = 0;
+    let dragDistanceTotal = 0;
+    let startTime = 0;
+
+    function getPositionX(e) {
+      return e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX;
+    }
+
+    function onDragStart(e) {
+      isDragging = true;
+      startX = getPositionX(e);
+      currentDeltaX = 0;
+      dragDistanceTotal = 0;
+      startTime = performance.now();
+
+      track.style.transition = 'none'; // Desactivar transición durante el arrastre directo
+      watchScreen.classList.add("drag-active");
+    }
+
+    function onDragMove(e) {
+      if (!isDragging) return;
+
+      const currentX = getPositionX(e);
+      let deltaX = currentX - startX;
+      dragDistanceTotal = Math.abs(deltaX);
+
+      // Efecto "Rubber Banding" en los extremos
+      if ((currentPanel === 0 && deltaX > 0) || (currentPanel === totalPanels - 1 && deltaX < 0)) {
+        deltaX *= 0.28; // Resistencia de resorte elástico
+      }
+
+      currentDeltaX = deltaX;
+      const panelWidthPct = 100 / totalPanels;
+      const baseTranslatePct = -currentPanel * panelWidthPct;
+      
+      // Aplicar desplazamiento en píxeles relativo al ancho
+      track.style.transform = `translateX(calc(${baseTranslatePct}% + ${deltaX}px))`;
+    }
+
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      watchScreen.classList.remove("drag-active");
+
+      const elapsed = performance.now() - startTime;
+      const velocity = Math.abs(currentDeltaX) / Math.max(elapsed, 1); // px/ms
+
+      // Restaurar animación fluida con curva de desaceleración tipo resorte
+      track.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1)';
+
+      // Umbral: más de 45px o movimiento rápido (flick velocity > 0.3)
+      if ((Math.abs(currentDeltaX) > 45 || velocity > 0.35) && dragDistanceTotal > 15) {
+        if (currentDeltaX < 0 && currentPanel < totalPanels - 1) {
+          currentPanel++;
+          playBeep(1100, 0.04);
+          triggerHaptic([40]);
+        } else if (currentDeltaX > 0 && currentPanel > 0) {
+          currentPanel--;
+          playBeep(900, 0.04);
+          triggerHaptic([40]);
+        }
+      }
+
+      updateTrackPosition();
+    }
+
+    function updateTrackPosition() {
+      const panelWidthPct = 100 / totalPanels;
+      const targetTranslate = -currentPanel * panelWidthPct;
+      track.style.transform = `translateX(${targetTranslate}%)`;
+
+      // Actualizar puntos de navegación
+      [0, 1, 2].forEach(i => {
+        const dot = document.getElementById(`dot-${i}`);
+        if (i === currentPanel) {
+          dot.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 transition-all";
+        } else {
+          dot.className = "w-2 h-2 rounded-full bg-slate-700 transition-all";
+        }
+      });
+    }
+
+    function goToPanel(index) {
+      if (index < 0 || index >= totalPanels) return;
+      currentPanel = index;
+      track.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1)';
+      updateTrackPosition();
+      playBeep(1000 + (index * 150), 0.03);
+    }
+
+    // Eventos Táctiles (Smartphones, Smartwatches, Tablets)
+    watchScreen.addEventListener('touchstart', onDragStart, { passive: true });
+    window.addEventListener('touchmove', onDragMove, { passive: true });
+    window.addEventListener('touchend', onDragEnd);
+    window.addEventListener('touchcancel', onDragEnd);
+
+    // Eventos de Ratón (Pruebas en PC / Laptops)
+    watchScreen.addEventListener('mousedown', onDragStart);
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+
+    function toggleWatchForm() {
+      isCircular = !isCircular;
+      const chassis = document.getElementById("chassis");
+      const screen = document.getElementById("watch-screen");
+      const bezel = document.getElementById("bezel-ring");
+      const btn = document.getElementById("btn-shape");
+
+      if (isCircular) {
+        chassis.className = chassis.className.replace("rounded-3xl", "rounded-full");
+        screen.className = screen.className.replace("rounded-2xl", "rounded-full");
+        bezel.className = bezel.className.replace("rounded-2xl", "rounded-full");
+        btn.innerText = "Forma: Circular";
+      } else {
+        chassis.className = chassis.className.replace("rounded-full", "rounded-3xl");
+        screen.className = screen.className.replace("rounded-full", "rounded-2xl");
+        bezel.className = bezel.className.replace("rounded-full", "rounded-2xl");
+        btn.innerText = "Forma: Cuadrada";
+      }
+      playBeep(950, 0.04);
+    }
+
+    function confirmAction(e) {
+      if (dragDistanceTotal > 10) return; // Si fue un arrastre, no activar botón
+      e.stopPropagation();
+      playBeep(1400, 0.15);
+      triggerHaptic([80, 50, 80]);
+      alert("✅ Protocolo confirmado en muñeca. Telemetría registrada en memoria local y transmitida al hábitat.");
+      goToPanel(0);
+    }
+
+    // TEST PVT DE MUÑECA
+    let pvtTimeout = null;
+    let pvtStartTime = null;
+    let pvtIsReady = false;
+
+    function startWatchPVT(e) {
+      if (dragDistanceTotal > 10) return;
+      e.stopPropagation();
+
+      const box = document.getElementById("watch-pvt-box");
+      const msg = document.getElementById("watch-pvt-msg");
+      const time = document.getElementById("watch-pvt-time");
+      const btn = document.getElementById("watch-pvt-btn");
+
+      time.classList.add("hidden");
+      msg.innerText = "ESPERA ESTÍMULO...";
+      msg.className = "text-[11px] font-mono text-amber-400 font-bold";
+      box.className = "w-full h-24 rounded-2xl border-2 border-amber-500 bg-amber-950/30 flex flex-col items-center justify-center cursor-pointer transition select-none";
+      btn.classList.add("hidden");
+
+      pvtIsReady = false;
+      const delay = Math.floor(Math.random() * 2000) + 1200;
+
+      pvtTimeout = setTimeout(() => {
+        pvtIsReady = true;
+        pvtStartTime = performance.now();
+        box.className = "w-full h-24 rounded-2xl border-2 border-rose-500 bg-rose-600 flex flex-col items-center justify-center cursor-pointer transition select-none";
+        msg.innerText = "¡TOCA YA!";
+        msg.className = "text-base font-black text-white font-mono";
+        playBeep(1600, 0.1, 'sawtooth');
+        triggerHaptic([150]);
+      }, delay);
+    }
+
+    function handleWatchPVTClick(e) {
+      if (dragDistanceTotal > 10) return;
+      e.stopPropagation();
+
+      const box = document.getElementById("watch-pvt-box");
+      const msg = document.getElementById("watch-pvt-msg");
+      const time = document.getElementById("watch-pvt-time");
+      const btn = document.getElementById("watch-pvt-btn");
+
+      if (!pvtIsReady && pvtTimeout) {
+        clearTimeout(pvtTimeout);
+        pvtTimeout = null;
+        msg.innerText = "Falsa alarma (antes de tiempo)";
+        msg.className = "text-[10px] font-mono text-rose-300";
+        box.className = "w-full h-24 rounded-2xl border-2 border-rose-500 bg-rose-950/40 flex flex-col items-center justify-center cursor-pointer select-none";
+        btn.classList.remove("hidden");
+        playBeep(250, 0.15, 'sawtooth');
+      } else if (pvtIsReady) {
+        const rt = Math.round(performance.now() - pvtStartTime);
+        pvtIsReady = false;
+        pvtTimeout = null;
+        msg.innerText = rt < 280 ? "Reflejos Óptimos" : "Fatiga Detectada";
+        msg.className = rt < 280 ? "text-[10px] font-mono text-emerald-400" : "text-[10px] font-mono text-rose-400";
+        time.innerText = `${rt} ms`;
+        time.className = `text-2xl font-black font-mono ${rt < 280 ? 'text-emerald-400' : 'text-rose-400'}`;
+        time.classList.remove("hidden");
+        box.className = "w-full h-24 rounded-2xl border-2 border-emerald-500 bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer select-none";
+        btn.classList.remove("hidden");
+        playBeep(rt < 280 ? 1200 : 400, 0.1);
+        triggerHaptic([80, 50, 80]);
+      }
+    }
+
+    // Actualización de reloj
+    setInterval(() => {
+      const d = new Date();
+      document.getElementById("watch-time").innerText = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+    }, 1000);
+
+    setCrew(0);
+    updateTrackPosition();
+  </script>
+</body>
+</html>
