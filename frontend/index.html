@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A-HAMS | Autonomous Health Assessment & Monitoring System (NASA Space Apps)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN for trend charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            space: {
+              900: '#070b14',
+              800: '#0e1726',
+              700: '#17233a',
+              card: '#121d33',
+              border: '#1f2e4d',
+              cyan: '#00f2fe',
+              emerald: '#10b981',
+              amber: '#f59e0b',
+              rose: '#f43f5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .status-pulse { animation: pulse-subtle 2s infinite ease-in-out; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #070b14; }
+    ::-webkit-scrollbar-thumb { background: #1f2e4d; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-space-900 text-slate-100 min-h-screen font-sans selection:bg-cyan-500 selection:text-black">
+
+  <!-- TOP HUD BAR -->
+  <header class="border-b border-space-border bg-space-800/80 backdrop-blur sticky top-0 z-50 px-6 py-3">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center font-black text-black text-xl shadow-lg shadow-cyan-500/20">
+          Δ
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold tracking-wider text-base text-cyan-400">A-HAMS</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 font-mono">EDGE-V1.0</span>
+          </div>
+          <p class="text-xs text-slate-400">Autonomous Health Assessment & Monitoring System | NASA MTV-1</p>
+        </div>
+      </div>
+
+      <!-- METADATA BADGES -->
+      <div class="flex flex-wrap items-center gap-3 text-xs font-mono">
+        <div class="bg-space-700/60 border border-space-border px-3 py-1.5 rounded-md flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 status-pulse"></span>
+          <span class="text-slate-300">MODO:</span>
+          <span class="text-emerald-400 font-semibold">100% LOCAL EDGE</span>
+        </div>
+        <div class="bg-space-700/60 border border-space-border px-3 py-1.5 rounded-md flex items-center gap-2">
+          <span class="text-slate-400">DÍA MISIÓN:</span>
+          <span class="text-cyan-300 font-bold" id="mission-day-badge">SOL 014</span>
+        </div>
+        <div class="bg-space-700/60 border border-space-border px-3 py-1.5 rounded-md flex items-center gap-2">
+          <span class="text-slate-400">LATENCIA TIERRA:</span>
+          <span class="text-amber-400 font-semibold" title="Store-and-forward Delay Tolerant Network">14m 12s (DTN)</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- CREW ROSTER SELECTION -->
+    <section>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xs font-mono uppercase tracking-widest text-slate-400">TRIPULACIÓN DE MISIÓN TRANSIT-1</h2>
+        <span class="text-xs text-slate-500">Haz clic en un tripulante para cargar su diagnóstico clínico</span>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="crew-roster">
+        <!-- Renderizado dinámico de astronautas -->
+      </div>
+    </section>
+
+    <!-- SELECTED ASTRONAUT BIO-PANEL -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- COLUMNA 1 & 2: TELEMETRÍA DETALLADA Y GRÁFICAS -->
+      <div class="lg:col-span-2 space-y-6">
+
+        <!-- HEADER DEL ASTRONAUTA SELECCIONADO -->
+        <div class="bg-space-card border border-space-border rounded-xl p-5 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center space-x-4">
+            <div id="astro-avatar" class="w-14 h-14 rounded-full border-2 border-cyan-400 bg-space-800 flex items-center justify-center font-bold text-xl text-cyan-300">
+              ER
+            </div>
+            <div>
+              <h1 id="astro-name" class="text-xl font-bold text-white tracking-wide">Dra. Elena Rostova</h1>
+              <p id="astro-role" class="text-sm text-cyan-400 font-medium">Comandante de Misión</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <span class="text-xs text-slate-400 block font-mono">SPACE EARLY WARNING SCORE</span>
+              <span id="sews-score-badge" class="text-2xl font-black text-emerald-400">02 / 15</span>
+            </div>
+            <div id="status-pill" class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-emerald-950 border border-emerald-700 text-emerald-300">
+              NOMINAL
+            </div>
+          </div>
+        </div>
+
+        <!-- 4 CARDS DE INDICADORES CLAVE -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <!-- Card 1: Fisiología / HRV -->
+          <div class="bg-space-card border border-space-border rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-mono mb-1">HRV (RMSSD)</div>
+            <div class="text-2xl font-bold text-cyan-300" id="metric-hrv">55 ms</div>
+            <div class="text-xs text-emerald-400 mt-1 flex items-center gap-1">
+              <span>●</span> <span id="metric-hr">Pulso: 64 bpm</span>
+            </div>
+          </div>
+
+          <!-- Card 2: Neurocognitivo -->
+          <div class="bg-space-card border border-space-border rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-mono mb-1">REFLEJOS (PVT)</div>
+            <div class="text-2xl font-bold text-slate-100" id="metric-rt">235 ms</div>
+            <div class="text-xs text-slate-400 mt-1" id="metric-lapses">Lapsos (>500ms): 0</div>
+          </div>
+
+          <!-- Card 3: Musculoesquelético -->
+          <div class="bg-space-card border border-space-border rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-mono mb-1">MASA MUSCULAR</div>
+            <div class="text-2xl font-bold text-slate-100" id="metric-muscle">-1.1%</div>
+            <div class="text-xs text-emerald-400 mt-1" id="metric-exercise">ARED: 95% comp.</div>
+          </div>
+
+          <!-- Card 4: Radiación y Entorno -->
+          <div class="bg-space-card border border-space-border rounded-xl p-4">
+            <div class="text-xs text-slate-400 font-mono mb-1">DOSIS RADIACIÓN</div>
+            <div class="text-2xl font-bold text-slate-100" id="metric-radiation">24 μSv/h</div>
+            <div class="text-xs text-slate-400 mt-1" id="metric-co2">CO2: 3.1 mmHg</div>
+          </div>
+        </div>
+
+        <!-- GRÁFICO HISTÓRICO DE TENDENCIA (14 DÍAS) -->
+        <div class="bg-space-card border border-space-border rounded-xl p-5">
+          <div class="flex justify-between items-center mb-4">
+            <div>
+              <h3 class="text-sm font-semibold text-white">Evolución de Biomarcadores en Misión (Sol 1 a 14)</h3>
+              <p class="text-xs text-slate-400">Monitoreo longitudinal de fatiga, variabilidad autonómica y masa muscular</p>
+            </div>
+            <span class="text-xs px-2.5 py-1 bg-space-800 rounded border border-space-border font-mono text-cyan-400">TELEMETRÍA LOCAL</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+        <!-- TEST COGNITIVO PVT INTERACTIVO (PSYCHOMOTOR VIGILANCE TEST) -->
+        <div class="bg-gradient-to-br from-space-card to-space-800 border border-space-border rounded-xl p-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+                Evaluación Neurocognitiva Rápida (NASA PVT Test)
+              </h3>
+              <p class="text-xs text-slate-400">Mide fatiga psicomotora y tiempos de reacción en milisegundos para prevención de errores en cabina.</p>
+            </div>
+            <span class="text-xs text-cyan-300 font-mono bg-cyan-950/60 border border-cyan-800 px-2 py-0.5 rounded">TEST OFFLINE</span>
+          </div>
+
+          <div class="bg-space-900 border border-space-border rounded-lg p-6 text-center space-y-4">
+            <div id="pvt-box" class="h-28 rounded-lg border-2 border-dashed border-space-border flex flex-col items-center justify-center cursor-pointer transition-colors select-none">
+              <span id="pvt-prompt" class="text-sm text-slate-400 font-mono">Haz clic en "Iniciar Test PVT" para calibrar reflejos</span>
+              <span id="pvt-timer" class="text-3xl font-black font-mono mt-1 text-white hidden">0 ms</span>
+            </div>
+            <div class="flex justify-center gap-3">
+              <button id="pvt-start-btn" onclick="startPVTTest()" class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-lg transition tracking-wide uppercase shadow-lg shadow-cyan-500/20">
+                Iniciar Test PVT
+              </button>
+              <button id="pvt-reset-btn" onclick="resetPVT()" class="px-4 py-2 bg-space-800 hover:bg-space-700 text-slate-300 text-xs rounded-lg border border-space-border transition">
+                Reiniciar
+              </button>
+            </div>
+            <div id="pvt-result-alert" class="text-xs font-mono text-cyan-400 hidden"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA 3: MOTOR DE DECISIÓN CLÍNICA Y CONTRAMEDIDAS -->
+      <div class="space-y-6">
+
+        <!-- RESUMEN DIAGNÓSTICO CLÍNICO -->
+        <div class="bg-space-card border border-space-border rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-space-border pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>🩺</span> Diagnóstico Clínico Autónomo
+            </h3>
+            <span class="text-xs font-mono text-slate-400" id="eval-timestamp">EDGE CDSS</span>
+          </div>
+
+          <p id="clinical-summary-text" class="text-xs text-slate-300 leading-relaxed">
+            Cargando evaluación clínica...
+          </p>
+
+          <!-- LISTA DE RIESGOS IDENTIFICADOS -->
+          <div class="space-y-2">
+            <div class="text-xs font-mono uppercase text-slate-400">Riesgos Sistémicos Detectados:</div>
+            <div id="risks-container" class="space-y-1.5">
+              <!-- Render de riesgos -->
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTRAMEDIDAS PRESCRITAS (CLOSED-LOOP ACTIONS) -->
+        <div class="bg-space-card border border-space-border rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-space-border pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>⚡</span> Contramedidas Prescritas
+            </h3>
+            <span class="text-xs font-mono bg-cyan-950 text-cyan-300 px-2 py-0.5 rounded border border-cyan-800">ACCIONABLE</span>
+          </div>
+
+          <div id="countermeasures-container" class="space-y-3">
+            <!-- Render de contramedidas -->
+          </div>
+        </div>
+
+        <!-- DTN STORE-AND-FORWARD TELEMETRY BUFFER -->
+        <div class="bg-space-card border border-space-border rounded-xl p-5 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="text-xs font-mono text-slate-400 uppercase tracking-wider">DTN Earth Uplink Buffer</h4>
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+          </div>
+          <div class="text-xs text-slate-300 space-y-1 font-mono">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Paquetes encolados:</span>
+              <span class="text-white" id="dtn-queue">56 logs bio</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Almacenamiento Edge:</span>
+              <span class="text-white">1.4 MB / 512 GB</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Próxima ventana:</span>
+              <span class="text-cyan-400">En 03h 42m</span>
+            </div>
+          </div>
+          <button onclick="simulateSync()" class="w-full mt-2 py-2 text-xs font-mono text-center rounded border border-space-border bg-space-800 hover:bg-space-700 text-slate-300 transition">
+            Simular Ventana de Enlace con Houston
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- SCRIPT CON DATOS SINTÉTICOS Y LÓGICA COMPLETA DE NAVEGADOR -->
+  <script>
+    // DATOS DE LA TRIPULACIÓN (FALLBACK STANDALONE COMPLETO)
+    const CREW_DATA = [
+      {
+        id: "ASTRO-01",
+        name: "Dra. Elena Rostova",
+        role: "Comandante de Misión",
+        initials: "ER",
+        status: "NOMINAL",
+        sews: 2,
+        vitals: { hr: 64, hrv: 55, spo2: 98.8, bp: "115/75" },
+        cognitive: { rt: 235, lapses: 0, sleep: 7.4, voice_stress: 0.22 },
+        muscle: { delta: -1.1, exercise_pct: 95 },
+        environment: { radiation: 24, co2: 3.1 },
+        risks: [],
+        countermeasures: [
+          {
+            id: "CM-NOM-00",
+            category: "Mantenimiento Preventivo",
+            title: "Protocolo Nominal de Vuelo Espacial",
+            urgency: "PREVENTIVA",
+            protocol: "Mantener 2.5 horas de rutina de ejercicio resistivo ARED y cardiovascular T2.",
+            dosage: "Ciclo diario estándar."
+          }
+        ],
+        history: {
+          days: [1, 3, 5, 7, 9, 11, 14],
+          hrv: [58, 57, 56, 54, 55, 54, 55],
+          rt: [230, 232, 235, 238, 234, 236, 235],
+          muscle: [-0.2, -0.4, -0.6, -0.8, -0.9, -1.0, -1.1]
+        }
+      },
+      {
+        id: "ASTRO-02",
+        name: "Marcus Vance",
+        role: "Ingeniero de Vuelo",
+        initials: "MV",
+        status: "ALERTA_CRITICA",
+        sews: 10,
+        vitals: { hr: 79, hrv: 28, spo2: 97.4, bp: "128/84" },
+        cognitive: { rt: 265, lapses: 1, sleep: 6.2, voice_stress: 0.45 },
+        muscle: { delta: -6.8, exercise_pct: 42 },
+        environment: { radiation: 25, co2: 3.2 },
+        risks: [
+          "Atrofia muscular acelerada (-6.8% vs baseline de misión)",
+          "Incumplimiento crítico de protocolo ARED por alta carga de mantenimiento",
+          "Desacondicionamiento cardiovascular por microgravedad prolongada"
+        ],
+        countermeasures: [
+          {
+            id: "CM-MUSC-03",
+            category: "Musculoesquelético",
+            title: "Intensificación de Protocolo ARED (Carga Excéntrica)",
+            urgency: "INMEDIATA",
+            protocol: "Reconfiguración prioritaria de horarios. Realizar 4 series de sentadilla y peso muerto guiado en ARED con resistencia incrementada al 85% 1RM.",
+            dosage: "Sesión intensiva obligatoria de 75 min + suplemento de 35g de proteína y calcio."
+          }
+        ],
+        history: {
+          days: [1, 3, 5, 7, 9, 11, 14],
+          hrv: [48, 44, 40, 36, 33, 30, 28],
+          rt: [240, 245, 250, 255, 260, 262, 265],
+          muscle: [-1.2, -2.5, -3.8, -4.7, -5.5, -6.1, -6.8]
+        }
+      },
+      {
+        id: "ASTRO-03",
+        name: "Dr. Kenji Sato",
+        role: "Oficial Científico",
+        initials: "KS",
+        status: "ALERTA_CRITICA",
+        sews: 9,
+        vitals: { hr: 74, hrv: 18, spo2: 98.0, bp: "122/80" },
+        cognitive: { rt: 395, lapses: 3, sleep: 4.1, voice_stress: 0.82 },
+        muscle: { delta: -2.1, exercise_pct: 88 },
+        environment: { radiation: 24, co2: 3.8 },
+        risks: [
+          "Agotamiento neurovegetativo severo (HRV crítico: 18 ms)",
+          "Riesgo operacional elevado por fatiga psicomotriz (3 lapsos PVT > 500ms)",
+          "Deprivación aguda de sueño (< 4.5 horas registradas)",
+          "Biomarcador vocal indica distrés agudo / burnout"
+        ],
+        countermeasures: [
+          {
+            id: "CM-COG-02",
+            category: "Neurocognitivo / Circadiano",
+            title: "Higiene Circadiana & Descanso Obligatorio Operativo",
+            urgency: "INMEDIATA",
+            protocol: "Restricción temporal de operaciones críticas de laboratorio. Ajuste de espectro lumínico de cabina a modo descanso (luz ámbar 2200K sin componente azul). Sesión guiada de coherencia cardíaca.",
+            dosage: "Ventana de reposo forzado de 9 horas ininterrumpidas."
+          }
+        ],
+        history: {
+          days: [1, 3, 5, 7, 9, 11, 14],
+          hrv: [45, 42, 38, 32, 26, 21, 18],
+          rt: [238, 250, 280, 315, 340, 375, 395],
+          muscle: [-0.5, -0.9, -1.2, -1.5, -1.8, -1.9, -2.1]
+        }
+      },
+      {
+        id: "ASTRO-04",
+        name: "Dra. Sarah Miller",
+        role: "Especialista Médica",
+        initials: "SM",
+        status: "ALERTA_MODERADA",
+        sews: 7,
+        vitals: { hr: 85, hrv: 36, spo2: 98.2, bp: "120/78" },
+        cognitive: { rt: 252, lapses: 0, sleep: 6.8, voice_stress: 0.38 },
+        muscle: { delta: -1.8, exercise_pct: 92 },
+        environment: { radiation: 89, co2: 2.9 },
+        risks: [
+          "Tasa de radiación ambiental crítica (89 μSv/h) por Evento de Partículas Solares",
+          "Dosis acumulada acelerada de radiación espacial"
+        ],
+        countermeasures: [
+          {
+            id: "CM-RAD-01",
+            category: "Inmunológico / Radiación",
+            title: "Protocolo de Refugio contra Tormenta Solar (SPE)",
+            urgency: "INMEDIATA",
+            protocol: "Traslado inmediato al núcleo central blindado con reservas de agua y polietileno de la nave. Monitoreo horario de dosímetro activo.",
+            dosage: "Permanencia en refugio hasta que los sensores externos indiquen < 25 μSv/h."
+          }
+        ],
+        history: {
+          days: [1, 3, 5, 7, 9, 11, 14],
+          hrv: [50, 48, 47, 46, 42, 39, 36],
+          rt: [242, 244, 246, 248, 250, 251, 252],
+          muscle: [-0.4, -0.7, -1.0, -1.3, -1.5, -1.6, -1.8]
+        }
+      }
+    ];
+
+    let currentCrewId = "ASTRO-01";
+    let chartInstance = null;
+
+    // INICIALIZACIÓN
+    function init() {
+      renderCrewRoster();
+      selectCrewMember(currentCrewId);
+    }
+
+    // RENDER DE LISTA DE TRIPULACIÓN
+    function renderCrewRoster() {
+      const container = document.getElementById("crew-roster");
+      container.innerHTML = "";
+
+      CREW_DATA.forEach(astro => {
+        let badgeColor = "bg-emerald-950 border-emerald-700 text-emerald-400";
+        let dotColor = "bg-emerald-400";
+        if (astro.status === "ALERTA_MODERADA") {
+          badgeColor = "bg-amber-950 border-amber-700 text-amber-400";
+          dotColor = "bg-amber-400";
+        } else if (astro.status === "ALERTA_CRITICA") {
+          badgeColor = "bg-rose-950 border-rose-700 text-rose-400";
+          dotColor = "bg-rose-400";
+        }
+
+        const isSelected = astro.id === currentCrewId;
+        const card = document.createElement("div");
+        card.className = `p-4 rounded-xl border cursor-pointer transition-all ${
+          isSelected 
+            ? 'bg-space-700/80 border-cyan-400 ring-1 ring-cyan-400' 
+            : 'bg-space-card border-space-border hover:border-slate-500'
+        }`;
+        card.onclick = () => selectCrewMember(astro.id);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono text-slate-400">${astro.id}</span>
+            <span class="text-xs px-2 py-0.5 rounded-full border font-bold ${badgeColor} flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full ${dotColor}"></span>
+              SEWS: ${astro.sews}
+            </span>
+          </div>
+          <div class="font-bold text-white text-sm">${astro.name}</div>
+          <div class="text-xs text-slate-400">${astro.role}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // SELECCIONAR TRIPULANTE
+    function selectCrewMember(id) {
+      currentCrewId = id;
+      renderCrewRoster();
+
+      const astro = CREW_DATA.find(a => a.id === id);
+      if (!astro) return;
+
+      // Actualizar Header
+      document.getElementById("astro-avatar").innerText = astro.initials;
+      document.getElementById("astro-name").innerText = astro.name;
+      document.getElementById("astro-role").innerText = astro.role;
+      document.getElementById("sews-score-badge").innerText = `${astro.sews.toString().padStart(2, '0')} / 15`;
+
+      const pill = document.getElementById("status-pill");
+      pill.innerText = astro.status.replace("_", " ");
+      if (astro.status === "NOMINAL") {
+        pill.className = "px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-emerald-950 border border-emerald-700 text-emerald-300";
+        document.getElementById("sews-score-badge").className = "text-2xl font-black text-emerald-400";
+      } else if (astro.status === "ALERTA_MODERADA") {
+        pill.className = "px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-amber-950 border border-amber-700 text-amber-300";
+        document.getElementById("sews-score-badge").className = "text-2xl font-black text-amber-400";
+      } else {
+        pill.className = "px-3 py-1.5 rounded-lg text-xs font-bold uppercase bg-rose-950 border border-rose-700 text-rose-300";
+        document.getElementById("sews-score-badge").className = "text-2xl font-black text-rose-400";
+      }
+
+      // Actualizar Métricas
+      document.getElementById("metric-hrv").innerText = `${astro.vitals.hrv} ms`;
+      document.getElementById("metric-hr").innerText = `Pulso: ${astro.vitals.hr} bpm`;
+      document.getElementById("metric-rt").innerText = `${astro.cognitive.rt} ms`;
+      document.getElementById("metric-lapses").innerText = `Lapsos (>500ms): ${astro.cognitive.lapses}`;
+      document.getElementById("metric-muscle").innerText = `${astro.muscle.delta}%`;
+      document.getElementById("metric-exercise").innerText = `ARED: ${astro.muscle.exercise_pct}% comp.`;
+      document.getElementById("metric-radiation").innerText = `${astro.environment.radiation} μSv/h`;
+      document.getElementById("metric-co2").innerText = `CO2: ${astro.environment.co2} mmHg`;
+
+      // Resumen Clínico
+      const summaryElem = document.getElementById("clinical-summary-text");
+      if (astro.status === "NOMINAL") {
+        summaryElem.innerText = "Biomarcadores en rango óptimo de tolerancia fisiológica. Función neuromuscular, tono autónomo y reserva cognitiva preservadas sin signos de descompensación.";
+      } else if (astro.status === "ALERTA_MODERADA") {
+        summaryElem.innerText = `Atención preventiva requerida. Se identificaron factores de riesgo ambiental/fisiológico (${astro.risks.length} indicadores alterados). Se han emitido contramedidas específicas para revertir la tendencia.`;
+      } else {
+        summaryElem.innerText = `ALERTA OPERACIONAL CRÍTICA. El tripulante presenta deterioro agudo multifactorial (${astro.risks.length} anomalías). Impacto inminente en la seguridad de vuelo si no se ejecutan las contramedidas prescritas.`;
+      }
+
+      // Lista de Riesgos
+      const risksContainer = document.getElementById("risks-container");
+      risksContainer.innerHTML = "";
+      if (astro.risks.length === 0) {
+        risksContainer.innerHTML = `<div class="text-xs text-slate-500 italic">No hay riesgos sistémicos detectados.</div>`;
+      } else {
+        astro.risks.forEach(risk => {
+          const rDiv = document.createElement("div");
+          rDiv.className = "text-xs p-2 rounded bg-rose-950/40 border border-rose-900/60 text-rose-300 flex items-start gap-2";
+          rDiv.innerHTML = `<span class="text-rose-400 font-bold">⚠</span> <span>${risk}</span>`;
+          risksContainer.appendChild(rDiv);
+        });
+      }
+
+      // Contramedidas Prescritas
+      const cmContainer = document.getElementById("countermeasures-container");
+      cmContainer.innerHTML = "";
+      astro.countermeasures.forEach(cm => {
+        const cmDiv = document.createElement("div");
+        cmDiv.className = "p-3.5 rounded-lg border border-space-border bg-space-800/80 space-y-2";
+        
+        let badgeStyle = "bg-cyan-950 border-cyan-800 text-cyan-300";
+        if (cm.urgency === "INMEDIATA") badgeStyle = "bg-rose-950 border-rose-800 text-rose-300";
+        else if (cm.urgency === "ALTA") badgeStyle = "bg-amber-950 border-amber-800 text-amber-300";
+
+        cmDiv.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-mono text-cyan-400 font-semibold">${cm.id} | ${cm.category}</span>
+            <span class="text-xs px-2 py-0.5 rounded border font-mono font-bold ${badgeStyle}">${cm.urgency}</span>
+          </div>
+          <div class="text-xs font-bold text-white">${cm.title}</div>
+          <div class="text-xs text-slate-300 leading-relaxed">${cm.protocol}</div>
+          <div class="text-xs text-slate-400 font-mono border-t border-space-border pt-1.5 mt-1.5">
+            <span class="text-slate-500">Duración/Dosis:</span> ${cm.dosage}
+          </div>
+          <button onclick="executeCountermeasure('${cm.id}')" class="w-full mt-2 py-1.5 bg-space-700 hover:bg-cyan-600 hover:text-black text-cyan-300 text-xs font-bold rounded transition tracking-wider uppercase border border-space-border">
+            Confirmar y Ejecutar Protocolo
+          </button>
+        `;
+        cmContainer.appendChild(cmDiv);
+      });
+
+      // Actualizar Gráfica
+      updateChart(astro);
+    }
+
+    // ACTUALIZAR GRÁFICA LONGITUDINAL
+    function updateChart(astro) {
+      const ctx = document.getElementById('trendChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      const labels = astro.history.days.map(d => `Sol ${d}`);
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'HRV RMSSD (ms)',
+              data: astro.history.hrv,
+              borderColor: '#00f2fe',
+              backgroundColor: 'rgba(0, 242, 254, 0.1)',
+              borderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Pérdida Masa Muscular (%)',
+              data: astro.history.muscle,
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.1)',
+              borderWidth: 2,
+              tension: 0.3,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8', font: { size: 11, family: 'monospace' } }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: '#17233a' },
+              ticks: { color: '#94a3b8', font: { size: 10, family: 'monospace' } }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              grid: { color: '#17233a' },
+              ticks: { color: '#00f2fe', font: { size: 10 } },
+              title: { display: true, text: 'HRV (ms)', color: '#00f2fe' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#f43f5e', font: { size: 10 } },
+              title: { display: true, text: 'Δ Masa %', color: '#f43f5e' }
+            }
+          }
+        }
+      });
+    }
+
+    // TEST PVT INTERACTIVO (PSYCHOMOTOR VIGILANCE TEST)
+    let pvtTimeout = null;
+    let pvtStartTime = null;
+    let pvtState = "IDLE"; // IDLE, WAITING, READY
+
+    function startPVTTest() {
+      const box = document.getElementById("pvt-box");
+      const prompt = document.getElementById("pvt-prompt");
+      const timer = document.getElementById("pvt-timer");
+      const resultAlert = document.getElementById("pvt-result-alert");
+
+      resultAlert.classList.add("hidden");
+      prompt.innerText = "ESPERA EL ESTÍMULO... (NO HAGAS CLIC AÚN)";
+      prompt.className = "text-sm text-amber-400 font-mono font-bold";
+      timer.classList.add("hidden");
+      box.className = "h-28 rounded-lg border-2 border-amber-500/50 bg-amber-950/20 flex flex-col items-center justify-center cursor-pointer transition-colors select-none";
+
+      pvtState = "WAITING";
+
+      const delay = Math.floor(Math.random() * 2500) + 1500; // Entre 1.5 y 4 segundos aleatorios
+
+      pvtTimeout = setTimeout(() => {
+        pvtState = "READY";
+        pvtStartTime = performance.now();
+        box.className = "h-28 rounded-lg border-2 border-rose-500 bg-rose-600 flex flex-col items-center justify-center cursor-pointer transition-colors select-none";
+        prompt.innerText = "¡¡ PULSA AHORA !!";
+        prompt.className = "text-base text-white font-black tracking-widest";
+      }, delay);
+
+      box.onclick = handlePVTClick;
+    }
+
+    function handlePVTClick() {
+      const box = document.getElementById("pvt-box");
+      const prompt = document.getElementById("pvt-prompt");
+      const timer = document.getElementById("pvt-timer");
+      const resultAlert = document.getElementById("pvt-result-alert");
+
+      if (pvtState === "WAITING") {
+        clearTimeout(pvtTimeout);
+        pvtState = "IDLE";
+        box.className = "h-28 rounded-lg border-2 border-rose-500 bg-rose-950/40 flex flex-col items-center justify-center cursor-pointer select-none";
+        prompt.innerText = "¡FALSA ALARMA! Pulsaste antes del estímulo.";
+        prompt.className = "text-xs text-rose-300 font-mono";
+      } else if (pvtState === "READY") {
+        const reactionTime = Math.round(performance.now() - pvtStartTime);
+        pvtState = "IDLE";
+        box.className = "h-28 rounded-lg border-2 border-emerald-500 bg-emerald-950/30 flex flex-col items-center justify-center select-none";
+        prompt.innerText = "Tiempo de reacción registrado:";
+        prompt.className = "text-xs text-slate-300 font-mono";
+        timer.innerText = `${reactionTime} ms`;
+        timer.className = "text-3xl font-black font-mono mt-1 text-emerald-400";
+        timer.classList.remove("hidden");
+
+        resultAlert.classList.remove("hidden");
+        if (reactionTime < 260) {
+          resultAlert.innerText = `● Resultado: Óptimo (${reactionTime}ms) - Alerta psicomotora excelente. Telemetría encolada en DTN.`;
+          resultAlert.className = "text-xs font-mono text-emerald-400";
+        } else if (reactionTime < 340) {
+          resultAlert.innerText = `● Resultado: Moderado (${reactionTime}ms) - Indicios leves de fatiga.`;
+          resultAlert.className = "text-xs font-mono text-amber-400";
+        } else {
+          resultAlert.innerText = `● Resultado: CRÍTICO (${reactionTime}ms) - Fatiga severa o lapso cognitivo (>350ms). Protocolo de descanso requerido.`;
+          resultAlert.className = "text-xs font-mono text-rose-400";
+        }
+      }
+    }
+
+    function resetPVT() {
+      clearTimeout(pvtTimeout);
+      pvtState = "IDLE";
+      const box = document.getElementById("pvt-box");
+      const prompt = document.getElementById("pvt-prompt");
+      const timer = document.getElementById("pvt-timer");
+      const resultAlert = document.getElementById("pvt-result-alert");
+
+      box.className = "h-28 rounded-lg border-2 border-dashed border-space-border flex flex-col items-center justify-center cursor-pointer select-none";
+      prompt.innerText = "Haz clic en \"Iniciar Test PVT\" para calibrar reflejos";
+      prompt.className = "text-sm text-slate-400 font-mono";
+      timer.classList.add("hidden");
+      resultAlert.classList.add("hidden");
+    }
+
+    function executeCountermeasure(cmId) {
+      alert(`[A-HAMS EDGE]: Protocolo ${cmId} confirmado y registrado en el log del hábitat. Notificación enviada a la tripulación.`);
+    }
+
+    function simulateSync() {
+      alert("[DTN PROTOCOL]: Ventana de enlace simulada. Transfiriendo buffer de 56 paquetes al Deep Space Network (DSN) de la NASA.");
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
