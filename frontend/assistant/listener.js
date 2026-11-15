@@ -1,12 +1,9 @@
 /*
- * A-HAMS · Entrada de voz del asistente (Speech-to-Text).
+ * A-HAMS · Entrada de voz del asistente (Speech-to-Text), 100% local.
  *
- * Motores:
- *   'server'  → graba con MediaRecorder, corta solo al detectar silencio y envía el clip al Edge Core
- *               (POST /api/voice/stt). Por defecto lo transcribe Whisper local, sin salir de la nave;
- *               el proveedor (local | openai | deepgram) se elige en backend/.env.
- *   'browser' → reconocimiento del navegador (Web Speech API). En Chrome usa servidores de
- *               Google, así que solo es un respaldo cuando el Edge Core no está disponible.
+ * Graba con MediaRecorder, corta solo al detectar silencio y envía el clip al Edge Core de la nave
+ * (POST /api/voice/stt), donde lo transcribe Whisper local. No usa el reconocimiento del navegador
+ * (Web Speech API), porque en Chrome envía el audio a servidores externos.
  *
  * API: const l = new VoiceListener({ onState }); await l.init(); const texto = await l.listen();
  *      l.stop() corta la grabación y transcribe lo grabado; l.cancel() lo descarta.
@@ -17,7 +14,7 @@
 
   const STT_CONFIG = {
     endpoint: `${global.AHAMS_CONFIG.apiBase}/api/voice/stt`,
-    statusEndpoint: `${global.AHAMS_CONFIG.apiBase}/api/assistant/status`,
+    statusEndpoint: `${global.AHAMS_CONFIG.apiBase}/health`,
     language: 'es',     // lo cambia setLanguage(); se envía al Edge Core
     threshold: 0.015,   // RMS a partir del cual se considera que hay voz
     silenceMs: 1100,    // silencio tras hablar que da la orden por terminada
@@ -25,7 +22,6 @@
     maxMs: 12000,       // duración máxima de una orden
   };
 
-  const BrowserRecognition = global.SpeechRecognition || global.webkitSpeechRecognition;
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && global.MediaRecorder);
 
   class VoiceListener {
@@ -34,12 +30,11 @@
       this.onState = onState || (() => {});
       this.engine = null;
       this.server = null;       // { provider, model, offline } del reconocimiento en el Edge Core
-      this.voiceStatus = null;  // respuesta completa de /api/assistant/status (modo, IA, síntesis)
       this.busy = false;
       this._finish = null;
     }
 
-    /** Elige el motor: el del Edge Core si está disponible; si no, el del navegador. */
+    /** Comprueba que Whisper local esté disponible en el Edge Core. */
     async init() {
       this.engine = null;
       if (canRecord) {
@@ -47,8 +42,7 @@
         const timer = setTimeout(() => ctrl.abort(), 1500);
         try {
           const res = await fetch(STT_CONFIG.statusEndpoint, { signal: ctrl.signal });
-          this.voiceStatus = await res.json();
-          const { stt } = this.voiceStatus;
+          const { stt } = await res.json();
           if (stt && stt.available) {
             this.engine = 'server';
             this.server = stt;
@@ -59,7 +53,6 @@
           clearTimeout(timer);
         }
       }
-      if (!this.engine && BrowserRecognition) this.engine = 'browser';
       return this.engine;
     }
 
@@ -69,7 +62,6 @@
       this._cancelled = false;
       try {
         if (this.engine === 'server') return await this._listenServer();
-        if (this.engine === 'browser') return await this._listenBrowser();
         throw new Error('No hay motor de reconocimiento de voz disponible.');
       } finally {
         this.busy = false;
@@ -151,28 +143,6 @@
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json.detail || `STT HTTP ${res.status}`);
       return (json.text || '').trim();
-    }
-
-    // ── Respaldo: reconocimiento del navegador ─────────────────────
-    _listenBrowser() {
-      return new Promise((resolve, reject) => {
-        const rec = new BrowserRecognition();
-        rec.lang = STT_CONFIG.language === 'en' ? 'en-US' : 'es-MX';
-        rec.interimResults = false;
-        rec.maxAlternatives = 1;
-        let text = '';
-        rec.onstart = () => this.onState('listening');
-        rec.onresult = (e) => { text = e.results[0][0].transcript; };
-        rec.onerror = (e) => {
-          if (e.error !== 'no-speech' && e.error !== 'aborted') reject(new Error(e.error));
-        };
-        rec.onend = () => {
-          this._finish = null;
-          resolve(this._cancelled ? '' : text.trim());
-        };
-        this._finish = () => rec.stop();
-        rec.start();
-      });
     }
   }
 

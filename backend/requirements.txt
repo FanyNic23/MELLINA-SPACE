@@ -1,20 +1,19 @@
-# API
+# A-HAMS Edge Core · 100% local (sin servicios externos)
+
+# API local
 fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic>=2.7
 pydantic-settings>=2.3
 python-multipart>=0.0.9
 
-# Telemetría en tiempo real (SQLite por defecto; asyncpg para PostgreSQL)
+# Telemetría en tiempo real (SQLite local)
 sqlalchemy[asyncio]>=2.0.30
 aiosqlite>=0.20
-asyncpg>=0.29
 
 # Voz local (Whisper en el Edge)
 faster-whisper>=1.0.0
 numpy>=1.26.0
 
-# Servicios externos opcionales (copiloto GPT, STT/TTS en la nube, Estación en Tierra AWS)
-openai>=1.50
+# Solo para las pruebas (cliente HTTP del TestClient de FastAPI)
 httpx>=0.27
-boto3>=1.34

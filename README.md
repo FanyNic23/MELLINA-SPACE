@@ -10,6 +10,35 @@
 
 ---
 
+## 🎯 La propuesta en una línea
+
+> **A-HAMS convierte a cada astronauta en su propio médico de a bordo: le enseña a medirse, le explica qué significa y le dice qué hacer, y cuándo avisar al cirujano de vuelo. Sin depender de la Tierra.**
+
+**Nombre del proyecto:** **A-HAMS** — *Autonomous Health Assessment & Monitoring System*. Su asistente de voz a bordo se llama **Mellina**.
+
+### Nuestro diferenciador: *Mídete · Entiéndete · Actúa*, 100% dentro de la nave
+
+| Pilar | Qué hace | Cómo se ve en la app |
+|---|---|---|
+| **Mídete** | Chequeo diario guiado: cómo medir cada indicador en el espacio y por qué importa | Presión, pulso (**con la cámara, sin hardware extra**), SpO₂, glucosa, temperatura, sueño y ánimo |
+| **Entiéndete** | Un índice propio del espacio (SEWS) que **explica cada punto** | Semáforo por indicador, desglose "+3 por glucosa 58 mg/dL", cuerpo 3D con el órgano afectado |
+| **Actúa** | Contramedidas concretas y una regla clara de **cuándo avisar al cirujano de vuelo** | Protocolo paso a paso; las banderas rojas salen con prioridad crítica en la próxima ventana de enlace |
+| **Constancia** | Rutina diaria con puntos, niveles, racha e insignias; meta **cooperativa** de toda la tripulación (no competitiva, para no generar tensión en aislamiento) | Pestaña *Rutina*: chequeo, test PVT, respiración, ejercicio, hidratación y cada contramedida activa; el botón de chequeo late si hoy no te mediste |
+| **Adaptable** | El mismo sistema sirve en una **nave a Marte, estación orbital, base lunar, base marciana o rover** | Selector de entorno: cambia latencia con la Tierra, gravedad, umbrales de radiación y CO₂, evacuación y si el cirujano atiende en tiempo real |
+| **Anticipa** | **Gemelo digital**: proyecta la salud 30 días con el mismo motor SEWS, sin y con contramedidas | Barra de tiempo sobre el cuerpo 3D: *"sin intervención, crítico en 14 días; con contramedidas, SEWS 2"* |
+
+Lo que nadie más junta: **autoevaluación guiada + IA clínica explicable + funcionamiento sin internet** frente a la latencia de 4 a 24 minutos con Marte.
+
+### Demo en 3 minutos
+1. *"Día 214 rumbo a Marte. Houston está a 40 minutos. Kenji tiene que cuidarse solo."* — se desconecta el Wi-Fi.
+2. **Mídete:** chequeo diario; el pulso se toma con la cámara.
+3. **Entiéndete:** SEWS crítico explicado punto por punto y el órgano en rojo en el cuerpo 3D.
+4. **Actúa:** contramedida inmediata y aviso al cirujano de vuelo en cola para la próxima ventana de enlace.
+5. **Anticipa:** se pulsa *reproducir* en el gemelo digital y se ve el cuerpo de Kenji empeorar 30 días… y recuperarse con las contramedidas.
+6. *"Cada astronauta, su propio médico de a bordo."*
+
+---
+
 ## 🛰️ 1. Contexto Operacional: El Desafío de los 40 Minutos
 
 En misiones de espacio profundo (como el tránsito a **Marte** o bases lunares **Artemis**), los astronautas enfrentan los 5 riesgos críticos definidos por el **NASA Human Research Program (HRP)**:
@@ -116,26 +145,26 @@ desafio_nasa/
 │   │   ├── core/                      # Configuración, base de datos y tripulación (crew.py)
 │   │   ├── models/                    # Tablas: observaciones FHIR, alertas, cola Tierra-Espacio
 │   │   ├── schemas/                   # FHIR Observation, API y modelos clínicos SEWS
-│   │   ├── routers/                   # /api/* (SEWS, enlace, PVT) y voz (STT/TTS, comando al copiloto)
+│   │   ├── routers/                   # /api/* (SEWS, enlace, PVT), /api/sim (panel de simulación) y voz (Whisper local)
 │   │   └── services/
 │   │       ├── rule_engine.py         # Motor de reglas: umbrales + línea base adaptativa + proyección
 │   │       ├── telemetry_service.py   # Ingesta FHIR -> reglas -> alertas -> copiloto -> WebSocket
-│   │       ├── ai_copilot.py          # Copiloto GPT (o reglas si no hay clave)
+│   │       ├── ai_copilot.py          # Copiloto de alertas con reglas deterministas (local)
 │   │       ├── simulator.py           # Simulador de crisis: tormenta solar, insomnio, EVA
 │   │       ├── sync_queue.py          # Store-and-forward Tierra-Espacio (AOS / LOS)
-│   │       ├── stt.py / tts.py        # Voz: Whisper local (u OpenAI / Deepgram) y ElevenLabs
+│   │       ├── stt.py                 # Reconocimiento de voz con Whisper local
 │   │       ├── clinical_engine.py     # Motor de cálculo SEWS y prescripción médica
+│   │       ├── sews_dataset.py        # Datos de misión + valores del panel de simulación
 │   │       └── data_adapter.py        # ⭐ Adaptador universal para los datasets de la NASA
 │   ├── scripts/
 │   │   ├── generate_synthetic_data.py # Generador de datos sintéticos con anomalías clínicas
 │   │   └── download_whisper_model.py  # Descarga única del modelo de voz local
 │   └── tests/
-│       └── smoke_test.py              # Prueba de extremo a extremo (sin claves externas)
+│       └── smoke_test.py              # Prueba de extremo a extremo (100% local)
 │
 └── frontend/
     ├── index.html                     # Dashboard HUD de la Estación (Gráficas, Telemetría, Prescripción)
-    ├── smartwatch.html                # ⌚ Interfaz Smartwatch de muñeca (Dial circular, Swipes, Mini PVT)
-    ├── asistente.html                 # 🗣️ Asistente 3D del reloj con voz (ES / EN)
+    ├── smartwatch.html                # ⌚ Reloj del tripulante: 5 carátulas (vitales, contramedida, mente, PVT y asistente Mellina con voz)
     └── assistant/                     # Avatar 3D, voz, micrófono y diagnóstico hablado
 ```
 
@@ -152,7 +181,7 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
    ```
 2. **Abrir cualquiera de las dos interfaces:**
    * **Dashboard Hábitat (`frontend/index.html`):** Vista de estación médica para monitoreo de la tripulación completa.
-   * **Smartwatch Astronauta (`frontend/smartwatch.html`):** Vista táctil de muñeca para el astronauta en movimiento (soporta gestos de deslizamiento táctil, alertas acústicas Web Audio y conmutador circular/cuadrado).
+   * **Smartwatch Astronauta (`frontend/smartwatch.html`):** Vista táctil de muñeca para el astronauta en movimiento: gestos de deslizamiento, alertas acústicas Web Audio, conmutador circular/cuadrado y el asistente de voz Mellina (holograma 3D) como quinta carátula.
 
 ---
 
@@ -172,11 +201,11 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
    ```
    Toda la configuración (host, puerto, CORS, ruta de datos y Whisper) vive en `backend/.env`, que no se versiona. La plantilla comentada es `backend/.env.example`.
 
-   **(Opcional) Reconocimiento de voz local para el asistente del reloj:** descarga una sola vez el modelo Whisper (~460 MB, queda en `backend/models/`, fuera de git). Después el micrófono funciona sin internet:
+   **Reconocimiento de voz local para el asistente del reloj:** instala una sola vez, antes de la misión, el modelo Whisper (~460 MB, queda en `backend/models/`, fuera de git). Después el micrófono funciona sin internet:
    ```bash
    python backend/scripts/download_whisper_model.py
    ```
-   Ajustes en `backend/.env`: `WHISPER_MODEL` (`base` es más rápido, `small` por defecto entiende mejor), `WHISPER_DEVICE=mps` (GPU de Apple Silicon, experimental) y `WHISPER_ALLOW_DOWNLOAD=false` para prohibir cualquier descarga.
+   Ajustes en `backend/.env`: `WHISPER_MODEL` (`base` es más rápido, `small` por defecto entiende mejor), `WHISPER_DEVICE=mps` (GPU de Apple Silicon, experimental) y `WHISPER_ALLOW_DOWNLOAD=false` (valor por defecto) para que el sistema nunca intente descargar nada.
 
 3. **(Opcional) Generar telemetría sintética:**
    ```bash
@@ -190,16 +219,18 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
    * Usa `SERVER_HOST`, `SERVER_PORT` y `SERVER_RELOAD` de `backend/.env`. Si cambias el host o el puerto, actualiza también `frontend/assistant/config.js`.
    * El servidor iniciará en: `http://127.0.0.1:8000`
    * Documentación interactiva de la API (Swagger UI): `http://127.0.0.1:8000/docs`
-   * **Modo en línea y offline (`AI_MODE=auto`)**: con claves en `backend/.env` e internet, el asistente usa el modo en línea, el más completo; sin ellas, o si una API falla, cae solo al modo offline:
+   * **100% offline:** el sistema no usa ninguna API ni servicio en la nube. Todo corre en el hábitat:
 
-     | | En línea | Offline |
-     |---|---|---|
-     | Entender y responder | GPT (`OPENAI_API_KEY`): cualquier pregunta, con todo el contexto de la misión y memoria de la conversación | Palabras clave y respuestas locales |
-     | Escuchar | OpenAI Whisper (o Deepgram) | Whisper local |
-     | Hablar | ElevenLabs (`ELEVENLABS_API_KEY`) | Voces del sistema |
-     | Copiloto de alertas | GPT con Structured Outputs | Reglas deterministas |
+     | Función | Cómo funciona |
+     |---|---|
+     | Evaluación clínica | Motor SEWS y reglas deterministas en el Edge Core |
+     | Asistente Mellina | Respuestas generadas con los datos del motor clínico |
+     | Escuchar | Whisper local (faster-whisper) |
+     | Hablar | Voces instaladas en el sistema operativo |
+     | Interfaz | Tailwind, Chart.js, Three.js, iconos y modelo 3D guardados en `frontend/` |
+     | Enlace con Tierra | Cola store-and-forward local con estación en Tierra simulada |
 
-     El estado actual se consulta en `GET /api/assistant/status`. PostgreSQL y AWS también son opcionales (ver `backend/.env.example`).
+   * **Panel de simulación** (pestaña *Simular* del dashboard, o `POST /api/sim/{id}`): introduce datos simulados (radiación, CO₂, SpO₂, pulso, HRV, sueño, reflejos, estrés vocal, coherencia, masa muscular, ejercicio) o lanza una crisis predefinida (tormenta solar, fuga de CO₂, fatiga extrema, aislamiento, atrofia). El motor clínico reevalúa al instante y todo se actualiza: SEWS, cuerpo 3D, amenazas, diagnóstico y reloj. *Datos reales* vuelve a los datos de misión.
    * Simulador de crisis: `POST /simulator/start` y luego `POST /simulator/scenarios/spe` (o `insomnia`, `eva`). El asistente del reloj anuncia las alertas en tiempo real.
    * Prueba de extremo a extremo: `cd backend && python -m tests.smoke_test`
 
@@ -210,7 +241,7 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
 
 ## 👩‍🚀 6. Perfiles Clínicos Simulados en la Misión
 
-El sistema incluye 4 tripulantes con escenarios clínicos basados en la literatura médica de la NASA:
+El sistema incluye 5 tripulantes con escenarios clínicos basados en la literatura médica de la NASA:
 
 | Tripulante | Rol | Condición | SEWS | Contramedida Principal |
 | :--- | :--- | :--- | :---: | :--- |
@@ -218,6 +249,7 @@ El sistema incluye 4 tripulantes con escenarios clínicos basados en la literatu
 | **Marcus Vance** | Ingeniero de Vuelo | **Atrofia Muscular Acelerada** (-6.8%) por baja adherencia a ARED | `10/15` | Protocolo intensivo excéntrico ARED (85% 1RM) + suplemento de 35g proteína. |
 | **Dr. Kenji Sato** | Oficial Científico | **Fatiga Psicomotriz y Burnout** (HRV: 18ms, 3 lapsos PVT, sueño < 4.5h) | `09/15` | Higiene circadiana (luz ámbar 2200K) + ventana forzada de reposo de 9h. |
 | **Dr. Samuel Miller** | Especialista Médico | **Evento de Partículas Solares (SPE)** (Radiación ambiental 89 μSv/h) | `07/15` | Evacuación inmediata a bahía blindada central hasta normalización (<25 μSv/h). |
+| **Dr. Diego Herrera** | Ingeniero de Soporte Vital | **Hipercapnia** (CO₂ 5.9 mmHg en su módulo, sueño < 5h, PVT 312 ms) | `06/15` | Ventilación dirigida del módulo de soporte vital + higiene circadiana. |
 
 ---
 

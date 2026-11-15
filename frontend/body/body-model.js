@@ -20,7 +20,7 @@
   'use strict';
 
   const { SYSTEMS, HAZARDS, levelOf } = global.ClinicalMap;
-  const LEVEL_COLORS = [0x2dd4bf, 0x38bdf8, 0xf8fafc]; // nominal · vigilar · crítico
+  const LEVEL_COLORS = [0x2dd4bf, 0x38bdf8, 0xef4444]; // nominal · vigilar · crítico (rojo de alarma)
   const LEVEL_LABELS = ['NOMINAL', 'VIGILAR', 'CRÍTICO'];
   const HOLO_COLOR = 0x22d3ee;
   const hex = c => '#' + c.toString(16).padStart(6, '0');
@@ -469,9 +469,8 @@
         const see = this.mode === 'hazard' && (id === 'muscle' || id === 'radiation') ? 0.75 : 1;
         for (const mesh of meshes) {
           const mat = mesh.material, base = mesh.userData.baseColor;
-          // El blanco (crítico) brilla menos para que el órgano conserve su relieve.
-          const glowK = level === 2 ? 0.35 : 1;
-          mat.color.copy(level ? tmp.copy(base).lerp(new THREE.Color(LEVEL_COLORS[level]), level === 2 ? 0.55 : 0.65) : base);
+          const glowK = 1;
+          mat.color.copy(level ? tmp.copy(base).lerp(new THREE.Color(LEVEL_COLORS[level]), 0.65) : base);
           mat.emissive.setHex(level ? LEVEL_COLORS[level] : isHover ? 0x0e7490 : 0x000000);
           mesh.userData.emissiveBase = ((level ? 0.35 : 0) + (isFocus || isHover ? 0.3 : 0)) * glowK;
           mesh.userData.glowK = glowK;
@@ -489,8 +488,8 @@
       const haze = this.effect === 'haze';
       this.particleMat.color.setHex(haze ? 0x9fd6a8 : hazardColor ?? LEVEL_COLORS[radLevel]);
       // Las partículas son ambiente: se ocultan al analizar un órgano (cerca de la cámara se verían como puntos).
-      this.particleMat.size = haze ? 0.05 : [0.018, 0.024, 0.032][radLevel];
-      this.particleMat.opacity = this.mode === 'system' ? 0 : haze ? 0.3 : 0.6;
+      this.particleMat.size = haze ? 0.052 : [0.018, 0.024, 0.032][radLevel];
+      this.particleMat.opacity = this.mode === 'system' ? 0 : haze ? 0.2 : 0.6;
       // Solo las amenazas con animación de partículas las muestran de cerca.
       this.particles.visible = !this.mode || ['radiation', 'float', 'haze'].includes(this.effect);
       const scanColor = this.mode === 'system' ? LEVEL_COLORS[this.levels[this.activeId]] : hazardColor ?? HOLO_COLOR;
@@ -660,10 +659,11 @@
           x = Math.cos(ang) * r0 * 1.4; z = Math.sin(ang) * r0 * 1.4;
           y = ((ph + t * 0.03) % 1) * H * 1.2;
         } else if (this.effect === 'haze') {
+          // Neblina de CO₂ alrededor de los órganos afectados (diseño original, más abierta y dispersa).
           const ang = ang0 + t * 0.12 * (0.5 + ph);
-          const r = (0.3 + r0 * 0.5) * Math.max(size.x, size.z, 0.25);
+          const r = (0.3 + r0 * 1.5) * Math.max(size.x, size.z, 0.25);
           x = center.x + Math.cos(ang) * r; z = center.z + Math.sin(ang) * r * 0.8;
-          y = center.y + (ph - 0.5) * Math.max(size.y, 0.3) * 1.6 + Math.sin(t + ang0) * 0.02;
+          y = center.y + (ph - 0.5) * Math.max(size.y, 0.3) * 2.4 + Math.sin(t + ang0) * 0.02;
         } else {
           const ang = ang0 + t * speed * (0.5 + (i % 7) * 0.1);
           x = Math.cos(ang) * r0; z = Math.sin(ang) * r0 * 0.75;

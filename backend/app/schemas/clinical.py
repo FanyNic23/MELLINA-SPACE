@@ -15,6 +15,7 @@ class VitalMetrics(BaseModel):
     systolic_bp: float = Field(..., description="Presión arterial sistólica (mmHg)")
     diastolic_bp: float = Field(..., description="Presión arterial diastólica (mmHg)")
     core_temp_c: float = Field(..., description="Temperatura corporal (°C)")
+    glucose_mg_dl: Optional[float] = Field(None, description="Glucosa en sangre capilar (mg/dL)")
 
 
 class EnvironmentalMetrics(BaseModel):
@@ -65,6 +66,15 @@ class Countermeasure(BaseModel):
     prescribed_dosage_duration: str
 
 
+class ScoreFactor(BaseModel):
+    """Un punto del SEWS explicado: cuánto suma, por qué, con qué valor medido y qué sistema afecta."""
+    points: int
+    risk: str
+    indicator: str
+    value: str
+    system: str  # neuro | psych | heart | lungs | muscle | radiation (sistemas del mapa corporal)
+
+
 class HealthStatusReport(BaseModel):
     crew_member_id: str
     crew_member_name: str
@@ -75,3 +85,6 @@ class HealthStatusReport(BaseModel):
     systemic_risks: List[str]
     active_countermeasures: List[Countermeasure]
     summary_clinical: str
+    score_breakdown: List[ScoreFactor] = Field(default_factory=list, description="Desglose auditable del SEWS")
+    escalate_to_surgeon: bool = Field(False, description="Requiere avisar al cirujano de vuelo en Tierra")
+    escalation_reasons: List[str] = Field(default_factory=list)

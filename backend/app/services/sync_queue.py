@@ -2,14 +2,12 @@
 
 Todo paquete (bundle FHIR, alerta, consejo del copiloto, log de voz, test PVT) se persiste primero en la
 base local. Con enlace LOS no se transmite nada; con AOS un worker vacía la cola por prioridad (0 = crítica)
-y antigüedad, hacia la "Estación en Tierra" (SQS + S3 si hay credenciales; si no, un sumidero simulado).
+y antigüedad, hacia la "Estación en Tierra" simulada (todo ocurre en la nave, sin servicios externos).
 Un paquete entregado se borra del buffer: la tabla sólo contiene lo pendiente o fallido y no crece sin límite.
 """
 import asyncio
-import json
 import logging
 import time
-import uuid
 from collections import deque
 from enum import IntEnum, StrEnum
 from typing import Optional, Protocol
@@ -18,7 +16,6 @@ from sqlalchemy import delete, func, select
 
 from app.core.db import as_utc, utcnow
 from app.models.telemetry import SyncPacketRow
-from app.services.storage import ObjectStore
 
 log = logging.getLogger("sync")
 MAX_ATTEMPTS = 5
@@ -54,29 +51,6 @@ class SimulatedGroundStation:
         await asyncio.sleep(0.005)
         self.received += len(packets)
         self.last.extend(p["id"] for p in packets)
-
-
-class AwsGroundStation:
-    name = "aws"
-
-    def __init__(self, sqs_queue_url: str, store: ObjectStore) -> None:
-        self.url, self.store = sqs_queue_url, store
-        self._sqs = store.client("sqs") if sqs_queue_url else None
-
-    async def deliver(self, packets: list[dict]) -> None:
-        if self.store.s3_enabled:  # archivo crudo del lote en S3
-            key = f"ground-station/{utcnow():%Y/%m/%d}/{uuid.uuid4().hex}.json"
-            if not await self.store.put(key, json.dumps(packets).encode(), "application/json"):
-                raise RuntimeError("S3 put falló")
-        if self._sqs:
-            for i in range(0, len(packets), 10):
-                chunk = packets[i:i + 10]
-                entries = [{"Id": str(n), "MessageBody": json.dumps(p),
-                            "MessageAttributes": {"priority": {"DataType": "Number", "StringValue": str(p["priority"])}}}
-                           for n, p in enumerate(chunk)]
-                resp = await asyncio.to_thread(self._sqs.send_message_batch, QueueUrl=self.url, Entries=entries)
-                if resp.get("Failed"):
-                    raise RuntimeError(f"SQS rechazó {len(resp['Failed'])} mensajes")
 
 
 class SyncQueue:

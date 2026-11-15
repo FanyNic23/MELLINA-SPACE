@@ -1,0 +1,49 @@
+"""Entornos de misión: el mismo sistema se adapta a dónde está la tripulación.
+
+Cada entorno define lo que cambia de verdad la evaluación y la respuesta médica:
+  · latencia con la Tierra (y si el cirujano de vuelo puede atender en tiempo real),
+  · gravedad (frena la pérdida muscular y ósea en la proyección),
+  · radiación esperable en ese lugar (umbrales de vigilancia y de evento solar),
+  · volumen de cabina (en un rover pequeño el CO2 se acumula antes),
+  · opción de evacuación médica.
+Valores aproximados basados en publicaciones de la NASA (dosimetría ISS, MSL-RAD en Marte, LND en la Luna).
+"""
+
+ENVIRONMENTS = {
+    "mars_transit": {
+        "name": "Nave en tránsito a Marte", "short": "Tránsito a Marte", "icon": "rocket-launch",
+        "latency_min": 14.2, "latency_text": "14 min una vía (4–24 min)", "realtime_surgeon": False,
+        "gravity_g": 0.0, "gravity_text": "Microgravedad (0 g)",
+        "radiation_watch": 35.0, "radiation_spe": 80.0, "co2_max": 4.0,
+        "evacuation": "Sin evacuación posible: la Tierra está a meses de viaje.",
+    },
+    "iss": {
+        "name": "Estación espacial en órbita baja", "short": "Estación orbital", "icon": "planet",
+        "latency_min": 0.01, "latency_text": "< 1 s (enlace casi continuo)", "realtime_surgeon": True,
+        "gravity_g": 0.0, "gravity_text": "Microgravedad (0 g)",
+        "radiation_watch": 35.0, "radiation_spe": 80.0, "co2_max": 4.0,
+        "evacuation": "Regreso de emergencia a la Tierra en unas 6 horas.",
+    },
+    "lunar_base": {
+        "name": "Base lunar Artemis", "short": "Base lunar", "icon": "moon-stars",
+        "latency_min": 0.022, "latency_text": "1.3 s una vía", "realtime_surgeon": True,
+        "gravity_g": 0.16, "gravity_text": "Gravedad lunar (0.16 g)",
+        "radiation_watch": 60.0, "radiation_spe": 110.0, "co2_max": 4.0,
+        "evacuation": "Regreso a la Tierra en unos 3 días.",
+    },
+    "mars_base": {
+        "name": "Base en la superficie de Marte", "short": "Base en Marte", "icon": "globe-hemisphere-west",
+        "latency_min": 12.5, "latency_text": "12.5 min una vía (4–24 min)", "realtime_surgeon": False,
+        "gravity_g": 0.38, "gravity_text": "Gravedad marciana (0.38 g)",
+        "radiation_watch": 40.0, "radiation_spe": 90.0, "co2_max": 4.0,
+        "evacuation": "Sin evacuación: hay ventana de regreso cada 26 meses.",
+    },
+    "rover": {
+        "name": "Rover presurizado en Marte", "short": "Rover presurizado", "icon": "gauge",
+        "latency_min": 12.5, "latency_text": "12.5 min una vía", "realtime_surgeon": False,
+        "gravity_g": 0.38, "gravity_text": "Gravedad marciana (0.38 g)",
+        "radiation_watch": 40.0, "radiation_spe": 90.0, "co2_max": 3.0,
+        "evacuation": "Regreso a la base en horas; cabina pequeña: el CO2 sube rápido.",
+    },
+}
+DEFAULT_ENVIRONMENT = "mars_transit"

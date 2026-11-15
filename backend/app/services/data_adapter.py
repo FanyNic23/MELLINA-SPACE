@@ -40,7 +40,8 @@ class NASADataAdapter:
                 blood_oxygen_pct=float(raw.get("spo2", raw.get("o2_sat", 98.0))),
                 systolic_bp=float(raw.get("systolic_bp", raw.get("bp_sys", 118.0))),
                 diastolic_bp=float(raw.get("diastolic_bp", raw.get("bp_dia", 78.0))),
-                core_temp_c=float(raw.get("temp", raw.get("core_temp", 36.7)))
+                core_temp_c=float(raw.get("temp", raw.get("core_temp", 36.7))),
+                glucose_mg_dl=(float(raw["glucose_mg_dl"]) if raw.get("glucose_mg_dl") is not None else None)
             ),
             environment=EnvironmentalMetrics(
                 ambient_radiation_usv_h=float(raw.get("radiation_rate", raw.get("rad_usv", 22.5))),

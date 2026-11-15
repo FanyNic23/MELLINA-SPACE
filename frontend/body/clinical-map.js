@@ -14,6 +14,8 @@
   'use strict';
 
   const clamp = v => Math.max(0, Math.min(100, Math.round(v)));
+  // Entorno de misión activo (lo fija el dashboard con setEnvironment): umbrales de radiación y CO2.
+  const ENV = { radiation_watch: 35, radiation_spe: 80, co2_max: 4, gravity_g: 0 };
   const levelOf = pct => (pct >= 70 ? 2 : pct >= 35 ? 1 : 0);
   const SENSORY = { BAJO: 10, MODERADO: 45, SEVERO: 80 };
 
@@ -28,10 +30,10 @@
     hrv: a => (60 - a.vitals.hrv) * 1.75,
     hr: a => (a.vitals.hr > 100 || a.vitals.hr < 45 ? 75 : 0),
     spo2: a => (99 - a.vitals.spo2) * 14,
-    co2: a => (a.environment.co2 - 1.5) * 14,
+    co2: a => (a.environment.co2 - 1.5) * (35 / (ENV.co2_max - 1.5)),
     atrophy: a => -a.muscle.delta * 14,
     exercise: a => (100 - a.muscle.exercise_pct) * 1.4,
-    radiation: a => a.environment.radiation,
+    radiation: a => a.environment.radiation / ENV.radiation_spe * 72,
   };
   const worst = (a, keys) => clamp(Math.max(...keys.map(k => D[k](a))));
 
@@ -61,8 +63,8 @@
     },
     {
       id: 'lungs', label: 'Pulmones · Respiratorio', organ: 'Pulmones',
-      level: a => (a.vitals.spo2 < 94 || a.environment.co2 > 6) ? 2
-        : (a.vitals.spo2 < 96 || a.environment.co2 > 4) ? 1 : 0,
+      level: a => (a.vitals.spo2 < 94 || a.environment.co2 > ENV.co2_max + 2) ? 2
+        : (a.vitals.spo2 < 96 || a.environment.co2 > ENV.co2_max) ? 1 : 0,
       damage: a => worst(a, ['spo2', 'co2']),
       detail: a => `SpO₂ ${a.vitals.spo2}% · CO₂ cabina ${a.environment.co2} mmHg`,
       metrics: a => [['SpO₂', `${a.vitals.spo2}%`], ['CO₂ cabina', `${a.environment.co2} mmHg`]],
@@ -77,7 +79,7 @@
     },
     {
       id: 'radiation', label: 'Radiación · Hueso y médula', organ: 'Esqueleto y médula ósea',
-      level: a => a.environment.radiation > 80 ? 2 : a.environment.radiation > 35 ? 1 : 0,
+      level: a => a.environment.radiation > ENV.radiation_spe ? 2 : a.environment.radiation > ENV.radiation_watch ? 1 : 0,
       damage: a => worst(a, ['radiation']),
       detail: a => `Dosis ${a.environment.radiation} μSv/h`,
       metrics: a => [['Tasa de dosis', `${a.environment.radiation} μSv/h`], ['Umbral nominal', '35 μSv/h']],
@@ -142,5 +144,14 @@
   ];
   const systemForRisk = text => (RISK_RULES.find(([, re]) => re.test(text)) || [null])[0];
 
-  global.ClinicalMap = { SYSTEMS, HAZARDS, levelOf, systemForRisk };
+  function setEnvironment(env) {
+    Object.assign(ENV, env);
+    const g = HAZARDS.find(h => h.id === 'microgravity');
+    g.name = env.gravity_g > 0 ? `Gravedad parcial (${env.gravity_g} g)` : 'Microgravedad';
+    g.summary = env.gravity_g > 0
+      ? `Con ${env.gravity_g} g la pérdida muscular y ósea es más lenta que en órbita, pero sigue ocurriendo sin ejercicio.`
+      : 'Sin carga gravitacional se pierde masa muscular y densidad ósea (~1-2 % al mes) si no se cumple el ejercicio.';
+  }
+
+  global.ClinicalMap = { SYSTEMS, HAZARDS, levelOf, systemForRisk, setEnvironment, ENV };
 })(window);

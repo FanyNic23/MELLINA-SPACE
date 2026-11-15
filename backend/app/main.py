@@ -1,8 +1,8 @@
 """A-HAMS Edge Core — API única del hábitat.
 
-Reúne la telemetría FHIR en tiempo real (motor de reglas, copiloto IA, simulador de crisis y
+Reúne la telemetría FHIR en tiempo real (motor de reglas, copiloto, simulador de crisis y
 sincronización diferida Tierra-Espacio), el motor clínico SEWS por días de misión y la voz
-del asistente del reloj.
+del asistente del reloj. Todo corre en el hábitat: no hay servicios externos ni llamadas a internet.
 
 Ejecutar:  python backend/run.py      ->  http://127.0.0.1:8000/docs
 """
@@ -14,30 +14,26 @@ from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.crew import CREW
+from app.core.environments import ENVIRONMENTS
 from app.core.db import SessionFactory, get_session, init_models
 from app.models.telemetry import AlertRow, ObservationRow
-from app.routers import assistant, clinical, voice
+from app.routers import checkin, clinical, mission, routine, simulation, voice
 from app.schemas.api import (AlertOut, ConsultRequest, CrewItem, CrewOverview, LinkRequest, ScenarioInfo,
                              ScenarioRequest)
 from app.schemas.fhir import SPECS, Indicator, Observation
 from app.services.ai_copilot import AICopilot
-from app.services.assistant_ai import AssistantAI
-from app.services.connectivity import Connectivity
-from app.services.llm import LLM
+from app.services.routine import RoutineStore
 from app.services.rule_engine import COLOR, Level, RuleEngine, worst
 from app.services.sews_dataset import SewsDataset
 from app.services.simulator import ScenarioKind, TelemetrySimulator
-from app.services.storage import ObjectStore
 from app.services.stt import SpeechToText
-from app.services.sync_queue import AwsGroundStation, GroundStation, SimulatedGroundStation, SyncQueue
+from app.services.sync_queue import SimulatedGroundStation, SyncQueue
 from app.services.telemetry_service import TelemetryService
-from app.services.tts import TextToSpeech
 from app.services.ws_hub import WSHub
 
 settings = get_settings()
@@ -49,11 +45,10 @@ log = logging.getLogger("main")
 async def lifespan(app: FastAPI):
     if settings.auto_create_tables:
         await init_models()
-    net = Connectivity(settings)
-    store, llm, tts = ObjectStore(settings), LLM(settings, net), TextToSpeech(settings, net)
-    copilot, stt, hub, rules = AICopilot(llm, store, tts), SpeechToText(settings, llm, net), WSHub(), RuleEngine()
-    ground: GroundStation = (AwsGroundStation(settings.sqs_queue_url, store)
-                             if (settings.sqs_queue_url or settings.s3_bucket) else SimulatedGroundStation())
+    environment = mission.load_environment(settings.mission_path)
+    settings.earth_one_way_latency_minutes = ENVIRONMENTS[environment]["latency_min"]
+    copilot, stt, hub, rules = AICopilot(), SpeechToText(settings), WSHub(), RuleEngine()
+    ground = SimulatedGroundStation()
     sync = SyncQueue(SessionFactory, ground)
     service = TelemetryService(settings, SessionFactory, rules, copilot, sync, hub)
     await service.bootstrap(CREW)
@@ -62,31 +57,30 @@ async def lifespan(app: FastAPI):
     if settings.sim_autostart:
         sim.start()
     warm_up = asyncio.create_task(stt.warm_up())  # carga Whisper sin retrasar el arranque
-    app.state.__dict__.update(settings=settings, store=store, llm=llm, copilot=copilot, stt=stt, tts=tts,
-                              assistant=AssistantAI(llm), hub=hub, rules=rules, sync=sync, service=service,
-                              sim=sim, sews=SewsDataset(settings.telemetry_data_path))
-    log.info("Sistema listo (ground=%s, ai_mode=%s, stt=%s, openai=%s, elevenlabs=%s)", ground.name,
-             settings.ai_mode, settings.stt_provider, llm.configured, tts.configured)
+    app.state.__dict__.update(settings=settings, copilot=copilot, stt=stt, hub=hub, rules=rules, sync=sync,
+                              service=service, sim=sim, sews=SewsDataset(settings.telemetry_data_path, settings.checkins_path),
+                              routine=RoutineStore(settings.routine_path), environment=environment)
+    log.info("Sistema listo, 100%% local (estación en Tierra=%s, voz=Whisper %s)", ground.name, settings.whisper_model)
     yield
     await sim.stop()
     await service.shutdown()
     await sync.stop()
     await asyncio.gather(warm_up, return_exceptions=True)
-    await llm.aclose()
-    await stt.aclose()
-    await tts.aclose()
 
 
 app = FastAPI(
     title=settings.app_name,
     version="1.0.0",
-    description="Backend de monitoreo biométrico/conductual de astronautas: FHIR, reglas + IA, "
-                "simulador de crisis y sincronización diferida Tierra-Espacio.",
+    description="Backend local (sin internet) de monitoreo biométrico/conductual de astronautas: FHIR, "
+                "motor de reglas, simulador de crisis y sincronización diferida Tierra-Espacio.",
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
 app.include_router(clinical.router)
-app.include_router(assistant.router)
+app.include_router(simulation.router)
+app.include_router(checkin.router)
+app.include_router(routine.router)
+app.include_router(mission.router)
 app.include_router(voice.router)
 
 
@@ -105,17 +99,8 @@ def _crew_or_404(service: TelemetryService, astronaut_id: str) -> dict:
 @app.get("/health", tags=["Sistema"])
 async def health(request: Request):
     st = request.app.state
-    return {"ok": True, "link": st.sync.link.value, "simulator_running": st.sim.running,
-            "ai_mode": settings.ai_mode, "openai": st.llm.configured, "elevenlabs": st.tts.configured,
-            "stt_provider": settings.stt_provider, "s3": st.store.s3_enabled}
-
-
-@app.get("/audio/{filename}", tags=["Sistema"], summary="Audio generado para el casco (mp3)")
-async def get_audio(filename: str, request: Request):
-    p = request.app.state.store.path_of(filename)
-    if not p:
-        raise HTTPException(404, "Audio no encontrado")
-    return FileResponse(p, media_type="audio/mpeg")
+    return {"ok": True, "offline": True, "link": st.sync.link.value, "simulator_running": st.sim.running,
+            "stt": await st.stt.status()}
 
 
 # =================================================================== Módulo A: ingesta FHIR real

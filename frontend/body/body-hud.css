@@ -27,7 +27,7 @@
 /* Velo de color plano según la amenaza activa */
 .hud-vignette { position: absolute; inset: 0; background: transparent; transition: background 0.8s ease; }
 .hud[data-effect="isolation"] .hud-vignette { background: rgba(0, 0, 0, 0.45); animation: hud-breathe 4s ease-in-out infinite; }
-.hud[data-effect="radiation"] .hud-vignette { background: rgba(248, 250, 252, 0.07); animation: hud-flicker 1.6s steps(2) infinite; }
+.hud[data-effect="radiation"] .hud-vignette { background: rgba(239, 68, 68, 0.08); animation: hud-flicker 1.6s steps(2) infinite; }
 .hud[data-effect="haze"] .hud-vignette { background: rgba(52, 211, 153, 0.06); }
 @keyframes hud-breathe { 50% { opacity: 0.75; } }
 @keyframes hud-flicker { 50% { opacity: 0.6; } }
@@ -109,7 +109,7 @@
 @keyframes hud-bar { from { width: 0; } }
 .hud-organs b { font: 700 11px ui-monospace, monospace; text-align: right; }
 
-.hud-reset { position: absolute; right: 22px; bottom: 20px; display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 8px 12px; border-radius: 999px; font-size: 11px; letter-spacing: 0.08em;
+.hud-reset { position: absolute; left: 40px; top: 40px; display: inline-flex; align-items: center; gap: 6px; border: 0; padding: 8px 12px; border-radius: 999px; font-size: 11px; letter-spacing: 0.08em;
   color: #22d3ee; background: rgba(34, 211, 238, 0.1); box-shadow: 0 0 18px rgba(34, 211, 238, 0.15); transition: background 0.2s; }
 .hud-reset:hover { background: rgba(34, 211, 238, 0.22); }
 .hud-reset[hidden] { display: none; }

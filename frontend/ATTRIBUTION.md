@@ -14,3 +14,7 @@ Ilustración educativa, no diagnóstica.
 ## Iconos — `frontend/icons/icons.js`
 
 [Phosphor Icons](https://phosphoricons.com) (variante *fill*), licencia MIT.
+
+## Marca — `frontend/brand/`
+
+Logo A-HAMS del equipo, vectorizado con potrace a partir del diseño original (`ahams-logo.svg`, `ahams-mark.svg`, `favicon.svg`, `brand.js`).

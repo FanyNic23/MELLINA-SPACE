@@ -1,6 +1,6 @@
 /*
  * A-HAMS · Datos y diagnóstico hablado del asistente (español / inglés).
- * Consume el Edge Core (FastAPI) y, si no responde, usa la telemetría de respaldo embebida.
+ * Consume el Edge Core local (motor clínico SEWS); no guarda copias propias de los datos.
  * Todo el texto se redacta para ser leído en voz alta (sin siglas ni símbolos de unidades).
  * El motor clínico genera riesgos y contramedidas en español; en inglés se traducen aquí
  * (riesgos por patrón, contramedidas por ID).
@@ -11,62 +11,6 @@
   const API_BASE = global.AHAMS_CONFIG.apiBase;
   const ASSISTANT_NAME = 'Mellina';
   let lang = 'es';
-
-  const FALLBACK_CREW = [
-    {
-      id: 'ASTRO-01', name: 'Dra. Elena Rostova', role: 'Comandante de Misión', missionDay: 14,
-      sews: 2, status: 'NOMINAL',
-      vitals: { hr: 64, hrv: 55, spo2: 98.8, sys: 115, dia: 75, temp: 36.7 },
-      env: { radiation: 24, totalRadiation: null, co2: 3.1, psi: 14.7 },
-      cog: { rt: 235, lapses: 0, sleep: 7.4, stress: 0.22 },
-      musc: { delta: -1.1, exercise: 95 },
-      risks: [],
-      countermeasures: [{ id: 'CM-NOM-00', title: 'Protocolo Nominal de Vuelo Espacial', urgency: 'PREVENTIVA', protocol: 'Mantener rutina estándar de 2.5 horas de ejercicio resistivo y cardiovascular.' }],
-    },
-    {
-      id: 'ASTRO-02', name: 'Marcus Vance', role: 'Ingeniero de Vuelo', missionDay: 14,
-      sews: 10, status: 'ALERTA_CRITICA',
-      vitals: { hr: 79, hrv: 28, spo2: 97.4, sys: 128, dia: 84, temp: 36.9 },
-      env: { radiation: 25, totalRadiation: null, co2: 3.2, psi: 14.7 },
-      cog: { rt: 265, lapses: 1, sleep: 6.2, stress: 0.45 },
-      musc: { delta: -6.8, exercise: 42 },
-      risks: [
-        'Atrofia muscular acelerada (-6.8% vs baseline)',
-        'Incumplimiento crítico de protocolo de contramedidas ARED/Treadmill',
-        'Estrés autonómico elevado (HRV reducido)',
-      ],
-      countermeasures: [{ id: 'CM-MUSC-03', title: 'Intensificación de Protocolo ARED (Carga Excéntrica)', urgency: 'ALTA', protocol: 'Incorporar 3 series adicionales de sentadillas y elevación de talones en ARED al 85% 1RM con enfoque excéntrico.' }],
-    },
-    {
-      id: 'ASTRO-03', name: 'Dr. Kenji Sato', role: 'Oficial Científico', missionDay: 14,
-      sews: 9, status: 'ALERTA_CRITICA',
-      vitals: { hr: 74, hrv: 18, spo2: 98.0, sys: 122, dia: 80, temp: 36.8 },
-      env: { radiation: 24, totalRadiation: null, co2: 3.8, psi: 14.7 },
-      cog: { rt: 395, lapses: 3, sleep: 4.1, stress: 0.82 },
-      musc: { delta: -2.1, exercise: 88 },
-      risks: [
-        'Agotamiento neurovegetativo severo (HRV crítico < 20ms)',
-        'Riesgo elevado de fallo operacional por fatiga psicomotriz severa (PVT Lapses)',
-        'Deprivación aguda de sueño (< 5h)',
-        'Indicador de distrés psicológico agudo por biomarcador vocal',
-      ],
-      countermeasures: [{ id: 'CM-COG-02', title: 'Higiene Circadiana y Terapia Lumínica Dinámica', urgency: 'ALTA', protocol: '1. Ajustar LED de cabina a 460nm (enriquecida en azul) durante horario operativo.' }],
-    },
-    {
-      id: 'ASTRO-04', name: 'Dr. Samuel Miller', role: 'Especialista Médico', missionDay: 14,
-      sews: 7, status: 'ALERTA_MODERADA',
-      vitals: { hr: 85, hrv: 36, spo2: 98.2, sys: 120, dia: 78, temp: 36.8 },
-      env: { radiation: 89, totalRadiation: null, co2: 2.9, psi: 14.7 },
-      cog: { rt: 252, lapses: 0, sleep: 6.8, stress: 0.38 },
-      musc: { delta: -1.8, exercise: 92 },
-      risks: ['Evento de Partículas Solares (SPE) o anomalía de radiación: 89 uSv/h'],
-      countermeasures: [{ id: 'CM-RAD-01', title: 'Protocolo de Refugio contra Tormenta de Radiación (SPE)', urgency: 'INMEDIATA', protocol: 'Desplazarse a módulo blindado central. Iniciar monitorización de dosimetría personal.' }],
-    },
-  ];
-
-  const FALLBACK_DTN = {
-    link: 'LOS', line_of_sight: false, one_way_latency_minutes: 14.2, pending_packets: 56, last_sync_at: null,
-  };
 
   async function getJSON(path, timeoutMs = 1500) {
     const ctrl = new AbortController();
@@ -118,7 +62,7 @@
     return m;
   }
 
-  /** Devuelve { online, crew, dtn }. Nunca lanza: sin backend usa los datos de respaldo. */
+  /** Devuelve { online, crew, dtn }. Nunca lanza: sin Edge Core devuelve la tripulación vacía. */
   async function loadMissionData() {
     try {
       const [overview, dtn, live] = await Promise.all([
@@ -129,31 +73,8 @@
       const liveById = Object.fromEntries(((live && live.crew) || []).map((c) => [c.id, c]));
       return { online: true, crew: overview.map((o) => applyLive(fromApi(o), liveById[o.crew_id])), dtn };
     } catch (err) {
-      console.info('[asistente] Edge Core no disponible, modo autónomo:', err.message);
-      return { online: false, crew: FALLBACK_CREW.map((m) => ({ ...m, displayStatus: m.status, alerts: [] })), dtn: FALLBACK_DTN };
-    }
-  }
-
-  /**
-   * Respuesta de la IA en línea (Edge Core → modelo de lenguaje con todo el contexto de la misión),
-   * o null si no está disponible o tarda demasiado: entonces el reloj responde en modo offline.
-   */
-  async function askOnline({ crewId, topic, question, history }) {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 25000);
-    try {
-      const res = await fetch(`${API_BASE}/api/assistant/ask`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ crew_id: crewId, lang, topic: question ? null : topic, question: question || null, history }),
-        signal: ctrl.signal,
-      });
-      if (!res.ok) return null;
-      return (await res.json()).reply || null;
-    } catch (err) {
-      return null;
-    } finally {
-      clearTimeout(timer);
+      console.info('[asistente] Edge Core no disponible:', err.message);
+      return { online: false, crew: [], dtn: null };
     }
   }
 
@@ -439,7 +360,6 @@
     setLanguage(code) { if (TEXT[code]) lang = code; },
     get language() { return lang; },
     loadMissionData,
-    askOnline,
     greeting: (m) => T().greeting(m),
     health: (m) => T().health(m),
     environment: (m) => T().environment(m),

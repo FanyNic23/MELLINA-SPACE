@@ -13,11 +13,11 @@
   'use strict';
 
   const STATUS_COLORS = {
-    NOMINAL: 0x10b981,
+    NOMINAL: 0x2dd4bf,
     ALERTA_MODERADA: 0x38bdf8,
-    ALERTA_CRITICA: 0xf8fafc,
+    ALERTA_CRITICA: 0xef4444,
   };
-  const HOLO_COLOR = 0x00f2fe;
+  const HOLO_COLOR = 0x22d3ee;
 
   const VERT = `
     varying vec3 vNormal;

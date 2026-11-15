@@ -3,261 +3,404 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>A-HAMS Watch | Astronaut Bio-Wearable UI (Physical, Cognitive & Psychological)</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>A-HAMS | Reloj del Tripulante</title>
+  <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+  <script src="brand/brand.js" defer></script>
+  <script src="vendor/tailwindcss.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            space: { 900: '#030405', 800: '#0b0f14', 700: '#121820', card: '#0a0e13', cyan: '#22d3ee' }
+          }
+        }
+      }
+    }
+  </script>
   <script src="icons/icons.js"></script>
   <style>
-    @keyframes pulse-ring {
-      0% { transform: scale(0.96); opacity: 0.9; }
-      50% { transform: scale(1.04); opacity: 0.4; }
-      100% { transform: scale(0.96); opacity: 0.9; }
-    }
-    .pulse-alert { animation: pulse-ring 1.8s infinite ease-in-out; }
-    ::-webkit-scrollbar { display: none; }
-
-    /* Estilos para arrastre fluido */
-    .drag-active {
-      cursor: grabbing !important;
-      user-select: none !important;
-    }
-    .carousel-track {
-      display: flex;
-      width: 400%; /* 4 Paneles: Glance, Acción, Mente/Respiración, PVT */
-      height: 100%;
-      will-change: transform;
-    }
-    .carousel-panel {
-      width: 25%;
-      height: 100%;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 0 10px;
+    /* Sistema visual del dashboard: plano, sin degradados, bordes ni puntos.
+       Niveles: nominal #2dd4bf · vigilar #38bdf8 · crítico #ef4444 (parpadea) */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #18202a; border-radius: 4px; }
+    .bg-space-card { background: #0a0e13; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+    /* Nivel crítico: rojo de alarma que parpadea */
+    @keyframes alarm-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+    .is-critical, .seg-bar.is-critical i.on { animation: alarm-blink 0.9s ease-in-out infinite !important; }
+    @media (prefers-reduced-motion: reduce) { .is-critical, .seg-bar.is-critical i.on { animation: none !important; } }
+    .edge-offline { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(3, 4, 5, 0.9); }
+    .edge-offline[hidden] { display: none; }
+    .edge-offline-card { text-align: center; padding: 32px 36px; border-radius: 18px; background: #0a0e13; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+    .panel-title { font: 600 10px/1 ui-monospace, monospace; letter-spacing: 0.16em; color: #64748b; }
+    @media (min-width: 1024px) {
+      html, body { height: 100%; overflow: hidden; }
+      body { display: flex; flex-direction: column; }
     }
 
-    /* Animación de la esfera de respiración */
+    /* Tripulación: fotos grandes de borde a borde */
+    /* Miniatura: foto arriba (rostro completo) y nombre en franja debajo, sin tapar la cara */
+    .crew-tile { position: relative; display: flex; flex-direction: column; border-radius: 12px; overflow: hidden; background: #0b0f14; text-align: left; transition: box-shadow 0.2s; }
+    /* Cuadrada (crece con el ancho), con tope de alto para que la columna quepa en una pantalla */
+    .crew-tile .tile-photo { position: relative; aspect-ratio: 1 / 1; max-height: max(84px, calc(18vh - 10px)); width: 100%; overflow: hidden; background: #000; }
+    .crew-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; transform: scale(1.22); transform-origin: 50% 38%; opacity: 0.7; transition: opacity 0.2s; }
+    .crew-tile:hover img { opacity: 1; }
+    .crew-tile .tile-info { padding: 5px 8px 6px; }
+    .crew-tile .tile-sews { position: absolute; top: 5px; right: 5px; padding: 2px 5px; border-radius: 5px; font: 700 9px ui-monospace, monospace; background: rgba(3, 4, 5, 0.82); }
+    /* Ficha grande: foto libre arriba; nombre, rol y SEWS en una franja debajo (no tapan la cara) */
+    .crew-hero { display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; background: #0b0f14; }
+    .crew-hero .hero-photo { position: relative; flex: 1; min-height: 0; }
+    .crew-hero .hero-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; animation: hero-in 0.5s ease both; }
+    @keyframes hero-in { from { opacity: 0; transform: scale(1.04); } }
+    /* Peligro: la foto del tripulante crítico pulsa en rojo (sube y baja la exposición) */
+    .crew-hero .hero-photo::after { content: ''; position: absolute; inset: 0; background: #ef4444; mix-blend-mode: color; opacity: 0; pointer-events: none; }
+    .crew-hero.is-danger .hero-photo::after { animation: danger-tint 2.2s ease-in-out infinite; }
+    .crew-hero.is-danger .hero-photo img { animation: hero-in 0.5s ease both, danger-exposure 2.2s ease-in-out infinite; }
+    .crew-hero.is-danger { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.55), 0 0 28px rgba(239, 68, 68, 0.25); animation: danger-glow 2.2s ease-in-out infinite; }
+    @keyframes danger-tint { 0%, 100% { opacity: 0.18; } 50% { opacity: 0.62; } }
+    @keyframes danger-exposure { 0%, 100% { filter: brightness(0.82) contrast(1.05); } 50% { filter: brightness(1.18) saturate(1.2) contrast(1.1); } }
+    @keyframes danger-glow { 0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), 0 0 18px rgba(239, 68, 68, 0.15); }
+      50% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.9), 0 0 38px rgba(239, 68, 68, 0.45); } }
+    @media (prefers-reduced-motion: reduce) { .crew-hero.is-danger, .crew-hero.is-danger .hero-photo::after, .crew-hero.is-danger .hero-photo img { animation: none; } .crew-hero.is-danger .hero-photo::after { opacity: 0.4; } }
+    /* Miniatura de un tripulante crítico: misma alerta roja que la ficha grande */
+    .crew-tile .tile-photo::after { content: ''; position: absolute; inset: 0; background: #ef4444; mix-blend-mode: color; opacity: 0; pointer-events: none; }
+    .crew-tile.is-danger .tile-photo::after { animation: danger-tint 2.2s ease-in-out infinite; }
+    .crew-tile.is-danger img { opacity: 1; animation: danger-exposure 2.2s ease-in-out infinite; }
+    .crew-tile.is-danger { animation: danger-glow 2.2s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .crew-tile.is-danger, .crew-tile.is-danger img, .crew-tile.is-danger .tile-photo::after { animation: none; } }
+    .crew-hero .hero-plate { flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding: 10px 14px 12px; }
+    .crew-hero .hero-bar { height: 3px; border-radius: 3px; box-shadow: 0 0 12px currentColor; transition: width 0.6s; }
+    .crew-hero .hero-first { font: 300 11px/1 ui-sans-serif, system-ui, sans-serif; letter-spacing: 0.3em; color: #94a3b8; text-transform: uppercase; margin-top: 8px; }
+    .crew-hero .hero-last { font: 900 24px/1.05 ui-sans-serif, system-ui, sans-serif; color: #fff; text-transform: uppercase; margin-top: 3px; }
+    .crew-hero .hero-role { font: 600 9px ui-monospace, monospace; letter-spacing: 0.14em; color: #22d3ee; text-transform: uppercase; margin-top: 5px; }
+    .crew-hero .hero-sews { text-align: right; flex: none; }
+    .crew-hero .hero-sews b { display: block; font: 800 30px/1 ui-monospace, monospace; }
+    .crew-hero .hero-sews span { display: block; font: 700 9px ui-monospace, monospace; letter-spacing: 0.14em; margin-top: 4px; }
+    .crew-hero .hero-id { display: block; font: 700 9px ui-monospace, monospace; letter-spacing: 0.16em; color: #64748b; margin-top: 3px; }
+
+    /* Dispositivo: caja grafito plana y pantalla OLED negra */
+    .watch { --size: min(78vw, 58vh, 480px); position: relative; width: var(--size); height: var(--size); }
+    .watch-band { position: absolute; left: 50%; width: 46%; height: 22%; transform: translateX(-50%); background: #10151b; }
+    .watch-band.top { top: -17%; border-radius: 18px 18px 6px 6px; }
+    .watch-band.bottom { bottom: -17%; border-radius: 6px 6px 18px 18px; }
+    .watch-case { position: absolute; inset: 0; padding: 4.5%; background: #121820; border-radius: 50%;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 60px rgba(34, 211, 238, 0.08); transition: border-radius 0.35s; }
+    .watch-crown { position: absolute; right: -3.2%; top: 42%; width: 4.5%; height: 16%; border-radius: 4px; background: #18202a; }
+    .watch-screen { position: relative; width: 100%; height: 100%; background: #000; border-radius: 50%; overflow: hidden;
+      display: flex; flex-direction: column; cursor: grab; transition: border-radius 0.35s; touch-action: pan-y; }
+    .watch.is-square .watch-case { border-radius: 26%; }
+    .watch.is-square .watch-screen { border-radius: 22%; }
+    .drag-active { cursor: grabbing !important; }
+
+    .carousel-track { display: flex; width: 500%; height: 100%; will-change: transform; }
+    .carousel-panel { position: relative; width: 20%; height: 100%; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 0 calc(var(--size) * 0.14); } /* % aquí sería del carrusel completo */
+    .w-tile { background: #0b0f14; border-radius: 10px; }
+    .w-label { font: 600 8px/1 ui-monospace, monospace; letter-spacing: 0.14em; color: #64748b; }
+
+    /* Orbe de respiración 0.1 Hz (4 s inhalar / 6 s exhalar) */
     @keyframes breathe-orb {
-      0%, 100% { transform: scale(0.7); box-shadow: 0 0 15px rgba(0, 242, 254, 0.2); }
-      40% { transform: scale(1.15); box-shadow: 0 0 35px rgba(0, 242, 254, 0.6); }
-      50% { transform: scale(1.15); box-shadow: 0 0 35px rgba(0, 242, 254, 0.6); }
+      0%, 100% { transform: scale(0.72); box-shadow: 0 0 14px rgba(34, 211, 238, 0.25); }
+      40%, 50% { transform: scale(1.12); box-shadow: 0 0 34px rgba(34, 211, 238, 0.6); }
     }
-    .orb-breathing {
-      animation: breathe-orb 10s infinite ease-in-out;
-    }
+    .orb-breathing { animation: breathe-orb 10s infinite ease-in-out; }
+
+    /* Confirmación dentro del reloj */
+    .watch-toast { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.92);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 30; }
+    .watch-toast.is-on { opacity: 1; }
+
+    .face-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 10px;
+      background: #0b0f14; transition: background 0.2s; }
+    .face-btn:hover { background: #121820; }
+    .face-btn.is-active { background: rgba(34, 211, 238, 0.12); box-shadow: 0 8px 24px rgba(34, 211, 238, 0.1); }
+    .face-btn .face-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none;
+      background: #121820; color: #22d3ee; font-size: 16px; }
+    .face-btn.is-active .face-icon { background: #22d3ee; color: #000; }
+    /* Asistente Mellina: holograma a pantalla completa del reloj */
+    #avatar { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .assist-caption { position: absolute; left: 14%; right: 14%; bottom: 24%; text-align: center; font-size: 11px; line-height: 1.35;
+      color: #e2e8f0; text-shadow: 0 1px 6px #000; pointer-events: none; min-height: 1.35em; }
+    .assist-mic { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 18px; background: #22d3ee; color: #000; box-shadow: 0 0 18px rgba(34, 211, 238, 0.45);
+      transition: background 0.2s, box-shadow 0.2s; }
+    .assist-mic:disabled { background: #18202a; color: #64748b; box-shadow: none; }
+    .assist-mic.listening { background: #f8fafc; animation: mic-pulse 1.1s ease-in-out infinite; }
+    .assist-mic.speaking { box-shadow: 0 0 28px rgba(34, 211, 238, 0.8); }
+    @keyframes mic-pulse { 50% { box-shadow: 0 0 0 10px rgba(248, 250, 252, 0.12), 0 0 26px rgba(248, 250, 252, 0.5); } }
+    .assist-log p { font-size: 12px; line-height: 1.45; color: #cbd5e1; padding: 8px 10px; border-radius: 10px; background: #0b0f14; }
+    .assist-log p.user { background: rgba(34, 211, 238, 0.08); }
+    .assist-log b { display: block; font: 700 9px ui-monospace, monospace; letter-spacing: 0.14em; color: #22d3ee; margin-bottom: 2px; }
+    .assist-log p.user b { color: #94a3b8; }
+    .query-btn { padding: 9px 10px; border-radius: 10px; background: #0b0f14; font-size: 12px; font-weight: 600; color: #e2e8f0;
+      display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+    .query-btn:hover { background: rgba(34, 211, 238, 0.12); }
+    .query-btn svg { color: #22d3ee; }
+    @media (prefers-reduced-motion: reduce) { .orb-breathing, .assist-mic.listening { animation: none; } }
+    /* Marca vectorial A-HAMS */
+    .brand-mark { height: 34px; width: auto; color: #ffffff; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.25)); }
+    .brand-word { height: 13px; width: auto; color: #f8fafc; display: block; }
   </style>
 </head>
-<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-3 font-sans select-none overflow-x-hidden">
+<body class="bg-space-900 text-slate-100 min-h-screen font-sans select-none selection:bg-cyan-500 selection:text-black">
 
-  <!-- BARRA DE CONTROLES EXTERNOS PARA DEMOS Y EVALUADORES -->
-  <header id="external-controls" class="mb-3 flex flex-wrap items-center justify-center gap-2 max-w-xl text-xs font-mono">
-    <a href="index.html" class="px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 flex items-center gap-1 transition shadow-sm">
-      <i data-icon="arrow-left" class="w-3.5 h-3.5"></i> Estación Hábitat
-    </a>
-    <span class="text-slate-500">|</span>
-    <span class="text-slate-400">Tripulante:</span>
-    <button onclick="setCrew(0)" id="btn-crew-0" class="px-2.5 py-1 rounded bg-slate-800 text-teal-400 border border-teal-700/60 font-bold">Elena</button>
-    <button onclick="setCrew(1)" id="btn-crew-1" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Marcus</button>
-    <button onclick="setCrew(2)" id="btn-crew-2" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Kenji</button>
-    <button onclick="setCrew(3)" id="btn-crew-3" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Samuel</button>
-    <span class="text-slate-500">|</span>
-    <button onclick="toggleWatchForm()" id="btn-shape" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
-      Forma: Circular
-    </button>
-    <span class="text-slate-500">|</span>
-    <a href="asistente.html" class="px-2.5 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 font-bold transition">
-      Asistente 3D
-    </a>
+  <!-- ENCABEZADO (mismo sistema que la estación) -->
+  <header class="flex-none bg-space-800 px-4 py-3">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <i data-brand="mark" class="brand-mark"></i>
+        <span class="w-px h-8 bg-[#18202a]"></span>
+        <div>
+          <i data-brand="word" class="brand-word"></i>
+          <p class="text-[11px] text-slate-400 mt-1.5">Reloj del tripulante</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs font-mono font-bold">
+        <a href="index.html" class="px-3.5 py-2 rounded-lg bg-space-700 hover:bg-[#18202a] text-slate-200 flex items-center gap-1.5 transition">
+          <i data-icon="arrow-left" class="w-4 h-4"></i> ESTACIÓN HÁBITAT
+        </a>
+      </div>
+    </div>
   </header>
 
-  <!-- CHASIS / MARCO FÍSICO DEL SMARTWATCH (Simulador de muñeca) -->
-  <div id="chassis" class="relative w-[360px] h-[360px] sm:w-[390px] sm:h-[390px] rounded-full p-3 bg-slate-900 shadow-2xl shadow-cyan-500/10 border-4 border-slate-600 flex items-center justify-center transition-all duration-300">
-    
-    <!-- Bisel interior con textura sutil -->
-    <div id="bezel-ring" class="absolute inset-1.5 rounded-full border border-slate-800 pointer-events-none transition-all duration-300"></div>
+  <!-- APP: tripulación | reloj | carátulas -->
+  <main class="p-3 gap-3 lg:grid lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:flex-1 lg:min-h-0 space-y-3 lg:space-y-0">
 
-    <!-- PANTALLA TÁCTIL OLED (Receptora de gestos Drag Touch en tiempo real) -->
-    <div id="watch-screen" class="relative w-full h-full rounded-full bg-black overflow-hidden flex flex-col justify-between p-3.5 text-center border-2 border-slate-900 transition-all duration-300 cursor-grab">
-      
-      <!-- INDICADOR SUPERIOR HUD (Hora, Batería, Estado Edge) -->
-      <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1 px-4 z-20 pointer-events-none">
-        <span id="watch-time" class="font-bold">14:32</span>
-        <div class="flex items-center gap-1.5">
-          <span id="status-dot" class="text-teal-400 inline-flex"><i data-icon="pulse" class="w-3 h-3"></i></span>
-          <span class="text-[9px] text-slate-500 font-semibold">100% EDGE</span>
-        </div>
-        <span id="astro-initials" class="text-cyan-400 font-bold">ER</span>
-      </div>
+    <!-- TRIPULACIÓN -->
+    <section class="flex flex-col gap-2 lg:min-h-0">
+      <h2 class="panel-title">TRIPULACIÓN · TRANSIT-1</h2>
+      <!-- Los otros 4 tripulantes; al tocar uno pasa a la ficha grande -->
+      <div class="grid grid-cols-2 gap-2" id="crew-roster"></div>
+      <!-- Ficha grande del tripulante seleccionado: foto a sangre que llena la columna -->
+      <article id="crew-hero" class="crew-hero flex-1 min-h-[420px] lg:min-h-0"></article>
+    </section>
 
-      <!-- CONTENEDOR DE PANTALLAS CON DRAG TOUCH FLUIDO 1:1 -->
-      <div id="touch-viewport" class="relative flex-1 w-full overflow-hidden my-auto select-none">
-        
-        <!-- PISTA DE ARRASTRE HORIZONTAL (CAROUSEL TRACK: 4 PANELES) -->
-        <div id="carousel-track" class="carousel-track">
-          
-          <!-- ================= PANEL 0: CARÁTULA GLANCE (SIGNOS VITALES) ================= -->
-          <div class="carousel-panel">
-            <!-- ANILLO SVG DINÁMICO SEWS -->
-            <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" stroke="#1e293b" stroke-width="8" fill="transparent" />
-                <circle id="sews-ring" cx="50" cy="50" r="42" stroke="#2dd4bf" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="230" stroke-linecap="round" fill="transparent" class="transition-all duration-700" />
-              </svg>
-              <div class="absolute flex flex-col items-center">
-                <span class="text-[9px] font-mono text-slate-400 uppercase">SEWS</span>
-                <span id="watch-sews" class="text-2xl font-black text-teal-400 leading-none">02</span>
-                <span id="watch-status" class="text-[9px] font-bold text-teal-400 tracking-wider">NOMINAL</span>
-              </div>
+    <!-- RELOJ -->
+    <section class="bg-space-card rounded-xl flex items-center justify-center py-20 lg:py-0 lg:min-h-0 overflow-hidden">
+      <div id="watch" class="watch">
+        <div class="watch-band top"></div>
+        <div class="watch-band bottom"></div>
+        <div class="watch-case">
+          <div class="watch-crown"></div>
+          <div id="watch-screen" class="watch-screen">
+
+            <!-- Barra superior: hora, estado y tripulante -->
+            <div class="flex items-center justify-between px-[26%] pt-[11%] text-[11px] font-mono text-slate-400 pointer-events-none">
+              <span id="watch-time" class="font-bold">14:32</span>
+              <span id="status-icon" class="inline-flex text-teal-400"><i data-icon="pulse" class="w-3.5 h-3.5"></i></span>
+              <img id="watch-photo" class="w-5 h-5 rounded-full object-cover" alt="">
             </div>
 
-            <!-- TRIO DE INDICADORES RÁPIDOS -->
-            <div class="grid grid-cols-3 gap-1.5 w-full px-2 pt-1 pointer-events-none">
-              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
-                <div class="text-[9px] text-slate-500 font-mono">PULSO</div>
-                <div id="watch-hr" class="text-xs font-bold text-cyan-300">64 bpm</div>
-              </div>
-              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
-                <div class="text-[9px] text-slate-500 font-mono">HRV</div>
-                <div id="watch-hrv" class="text-xs font-bold text-slate-200">55 ms</div>
-              </div>
-              <div class="bg-slate-900/90 border border-slate-800 rounded-lg py-1">
-                <div class="text-[9px] text-slate-500 font-mono">RAD</div>
-                <div id="watch-rad" class="text-xs font-bold text-slate-200">24 μSv</div>
-              </div>
-            </div>
+            <!-- Carrusel de 5 carátulas con arrastre 1:1 -->
+            <div id="touch-viewport" class="relative flex-1 w-full overflow-hidden">
+              <div id="carousel-track" class="carousel-track">
 
-            <div class="flex items-center gap-1 text-[9px] text-slate-500 font-mono pt-1 pointer-events-none">
-              <i data-icon="arrows-left-right" class="w-3 h-3"></i><span>Desliza para Contramedidas y Salud Mental</span>
-            </div>
-          </div>
-
-          <!-- ================= PANEL 1: CONTRAMEDIDA URGENTE ================= -->
-          <div class="carousel-panel space-y-2">
-            <div id="action-badge" class="px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-950 border border-cyan-800 text-cyan-300">
-              CONTRAMEDIDA DISPONIBLE
-            </div>
-            <h3 id="action-title" class="text-xs font-bold text-white leading-tight px-1">Protocolo Nominal ARED / T2</h3>
-            <p id="action-desc" class="text-[10px] text-slate-300 leading-snug line-clamp-3 px-2">Biomarcadores óptimos. Mantener 2.5h de ejercicio cardiovascular y resistivo.</p>
-            <button onclick="confirmAction(event)" class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-[11px] font-black rounded-full font-mono uppercase tracking-wide transition shadow-lg shadow-cyan-500/20">
-              Confirmar y Ejecutar
-            </button>
-          </div>
-
-          <!-- ================= PANEL 2: SALUD MENTAL Y COHERENCIA CARDÍACA ================= -->
-          <div class="carousel-panel space-y-1.5">
-            <div class="text-[10px] font-mono text-cyan-400 flex items-center gap-1 justify-center">
-              <i data-icon="brain" class="w-3.5 h-3.5"></i> SALUD MENTAL Y BIOFEEDBACK
-            </div>
-
-            <!-- MICRO-CHECK-IN DE 1 TOQUE (MODELO EMOCIONAL DE RUSSELL) -->
-            <div class="w-full px-1">
-              <div class="text-[9px] text-slate-400 font-mono mb-1">Check-in de 1 Toque:</div>
-              <div class="grid grid-cols-4 gap-1">
-                <button onclick="submitMood('calm', event)" id="mood-calm" class="py-1 rounded bg-slate-900 border border-teal-700/60 text-[10px] hover:bg-teal-950 text-teal-300">Calmo</button>
-                <button onclick="submitMood('focused', event)" id="mood-focused" class="py-1 rounded bg-slate-900 border border-cyan-700/60 text-[10px] hover:bg-cyan-950 text-cyan-300">Enfocado</button>
-                <button onclick="submitMood('anxious', event)" id="mood-anxious" class="py-1 rounded bg-slate-900 border border-sky-700/60 text-[10px] hover:bg-sky-950 text-sky-300">Ansioso</button>
-                <button onclick="submitMood('exhausted', event)" id="mood-exhausted" class="py-1 rounded bg-slate-900 border border-slate-300/60 text-[10px] hover:bg-white/10 text-white">Agotado</button>
-              </div>
-              <div id="mood-status-label" class="text-[9px] font-mono text-slate-400 mt-1">Estado: Calmo / Equilibrado</div>
-            </div>
-
-            <!-- ESFERA DE RESPIRACIÓN Y COHERENCIA CARDÍACA (0.1 Hz) -->
-            <div class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 flex items-center justify-between gap-2 mt-1">
-              <div id="breathe-orb" class="w-12 h-12 rounded-full bg-cyan-400 flex items-center justify-center font-bold text-[9px] text-black shadow-md flex-shrink-0 transition-transform">
-                0.1Hz
-              </div>
-              <div class="text-left flex-1">
-                <div id="breathe-text" class="text-[10px] font-bold text-white">Coherencia Cardíaca</div>
-                <div id="breathe-sub" class="text-[9px] text-slate-400">Inhala 4s / Exhala 6s</div>
-                <div class="flex items-center gap-1.5 mt-0.5">
-                  <span class="text-[9px] font-mono text-cyan-300">Coherencia: <span id="coherence-pct">88%</span></span>
+                <!-- 0 · VITALES -->
+                <div class="carousel-panel gap-2.5">
+                  <div class="relative w-[46%] aspect-square flex items-center justify-center pointer-events-none">
+                    <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="42" stroke="#121820" stroke-width="7" fill="none"/>
+                      <circle id="sews-ring" cx="50" cy="50" r="42" stroke="#2dd4bf" stroke-width="7" stroke-dasharray="264" stroke-dashoffset="230"
+                        stroke-linecap="round" fill="none" style="transition: stroke-dashoffset 0.7s, stroke 0.4s; filter: drop-shadow(0 0 5px currentColor)"/>
+                    </svg>
+                    <div class="absolute flex flex-col items-center">
+                      <span class="w-label">SEWS</span>
+                      <span id="watch-sews" class="text-3xl font-black leading-none mt-1">02</span>
+                      <span id="watch-status" class="text-[9px] font-bold tracking-wider mt-1">NOMINAL</span>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5 w-full pointer-events-none">
+                    <div class="w-tile py-1.5 text-center"><div class="w-label">PULSO</div><div id="watch-hr" class="text-xs font-bold text-cyan-300 mt-1">64 bpm</div></div>
+                    <div class="w-tile py-1.5 text-center"><div class="w-label">HRV</div><div id="watch-hrv" class="text-xs font-bold text-slate-100 mt-1">55 ms</div></div>
+                    <div class="w-tile py-1.5 text-center"><div class="w-label">RAD</div><div id="watch-rad" class="text-xs font-bold text-slate-100 mt-1">24 μSv</div></div>
+                  </div>
                 </div>
+
+                <!-- 1 · CONTRAMEDIDA -->
+                <div class="carousel-panel gap-2 text-center">
+                  <span id="action-urgency" class="w-label">CONTRAMEDIDA</span>
+                  <h3 id="action-title" class="text-sm font-bold text-white leading-tight">Protocolo Nominal ARED / T2</h3>
+                  <p id="action-desc" class="text-[10px] text-slate-300 leading-snug line-clamp-3">—</p>
+                  <button onclick="confirmAction(event)" class="w-full py-2 bg-cyan-400 hover:bg-cyan-300 active:scale-95 text-black text-[11px] font-black rounded-full font-mono uppercase tracking-wide transition shadow-lg shadow-cyan-500/20">
+                    Confirmar y ejecutar
+                  </button>
+                </div>
+
+                <!-- 2 · MENTE: check-in de 1 toque y respiración 0.1 Hz -->
+                <div class="carousel-panel gap-2">
+                  <div class="w-label flex items-center gap-1"><i data-icon="brain" class="w-3 h-3 text-cyan-400"></i> CHECK-IN EMOCIONAL</div>
+                  <div class="grid grid-cols-2 gap-1 w-full">
+                    <button onclick="submitMood('calm', event)" id="mood-calm" class="mood-btn">Calmo</button>
+                    <button onclick="submitMood('focused', event)" id="mood-focused" class="mood-btn">Enfocado</button>
+                    <button onclick="submitMood('anxious', event)" id="mood-anxious" class="mood-btn">Ansioso</button>
+                    <button onclick="submitMood('exhausted', event)" id="mood-exhausted" class="mood-btn">Agotado</button>
+                  </div>
+                  <div class="w-tile w-full p-2 flex items-center gap-2">
+                    <div id="breathe-orb" class="w-11 h-11 rounded-full bg-cyan-400 flex items-center justify-center font-bold text-[8px] text-black flex-shrink-0">0.1Hz</div>
+                    <div class="text-left flex-1 min-w-0">
+                      <div id="breathe-text" class="text-[10px] font-bold text-white truncate">Coherencia cardíaca</div>
+                      <div id="breathe-sub" class="text-[9px] text-slate-400 truncate">Inhala 4 s · exhala 6 s</div>
+                      <div class="text-[9px] font-mono text-cyan-300">Coherencia <span id="coherence-pct">88%</span></div>
+                    </div>
+                    <button onclick="toggleBreathing(event)" id="btn-breathe" class="w-8 h-8 rounded-full bg-cyan-400 text-black grid place-items-center flex-none active:scale-95" aria-label="Iniciar respiración">
+                      <i data-icon="play" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 3 · TEST PVT -->
+                <div class="carousel-panel gap-2">
+                  <div class="w-label flex items-center gap-1"><i data-icon="scan" class="w-3 h-3 text-cyan-400"></i> TEST DE VIGILANCIA</div>
+                  <div id="watch-pvt-box" onclick="handleWatchPVTClick(event)" class="w-full h-24 rounded-2xl bg-space-800 flex flex-col items-center justify-center cursor-pointer transition-colors">
+                    <span id="watch-pvt-msg" class="text-[11px] text-slate-400 font-mono text-center px-2">Toca Iniciar</span>
+                    <span id="watch-pvt-time" class="text-2xl font-black text-teal-400 hidden font-mono">0 ms</span>
+                  </div>
+                  <button id="watch-pvt-btn" onclick="startWatchPVT(event)" class="w-full py-1.5 bg-space-700 hover:bg-[#18202a] active:scale-95 text-cyan-300 text-[10px] font-bold rounded-full font-mono uppercase">
+                    Iniciar test
+                  </button>
+                </div>
+
+                <!-- 4 · ASISTENTE MELLINA (voz + holograma) -->
+                <div class="carousel-panel" id="assist-face" role="button" tabindex="0" aria-label="Hablar con Mellina">
+                  <canvas id="avatar"></canvas>
+                  <div class="assist-caption" id="caption" aria-live="polite"></div>
+                  <button class="assist-mic" id="mic" aria-label="Hablar por micrófono"><i data-icon="microphone" class="w-5 h-5"></i></button>
+                </div>
+
               </div>
-              <button onclick="toggleBreathing(event)" id="btn-breathe" class="px-2.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-[9px] font-black rounded-lg uppercase font-mono tracking-wider">
-                Iniciar
-              </button>
+            </div>
+
+            <!-- Paginador (barras) -->
+            <div class="flex items-center justify-center gap-1.5 pb-[10%] pt-1">
+              <button onclick="goToPanel(0)" id="page-0" aria-label="Vitales"></button>
+              <button onclick="goToPanel(1)" id="page-1" aria-label="Contramedida"></button>
+              <button onclick="goToPanel(2)" id="page-2" aria-label="Mente"></button>
+              <button onclick="goToPanel(3)" id="page-3" aria-label="Test PVT"></button>
+              <button onclick="goToPanel(4)" id="page-4" aria-label="Asistente"></button>
+            </div>
+
+            <div id="watch-toast" class="watch-toast">
+              <div class="text-center px-[18%]">
+                <i data-icon="check-circle" class="w-10 h-10 text-teal-400"></i>
+                <div class="text-sm font-bold text-white mt-2">Protocolo registrado</div>
+                <div class="text-[10px] text-slate-400 mt-1">Guardado en memoria local y enviado al hábitat.</div>
+              </div>
             </div>
           </div>
-
-          <!-- ================= PANEL 3: TEST PVT DE PULGAR ================= -->
-          <div class="carousel-panel space-y-2">
-            <div class="text-[10px] font-mono text-cyan-400 flex items-center gap-1 justify-center">
-              <i data-icon="scan" class="w-3.5 h-3.5"></i> TEST DE VIGILANCIA PVT
-            </div>
-            <div id="watch-pvt-box" onclick="handleWatchPVTClick(event)" class="w-full h-24 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/60 flex flex-col items-center justify-center cursor-pointer transition select-none">
-              <span id="watch-pvt-msg" class="text-[11px] text-slate-400 font-mono text-center px-2">Toca "Iniciar" abajo</span>
-              <span id="watch-pvt-time" class="text-2xl font-black text-teal-400 hidden font-mono">0 ms</span>
-            </div>
-            <button id="watch-pvt-btn" onclick="startWatchPVT(event)" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 text-[10px] font-bold rounded-full font-mono uppercase">
-              Iniciar Test
-            </button>
-          </div>
-
         </div>
-
       </div>
+    </section>
 
-      <!-- BARRA DE NAVEGACIÓN INFERIOR (PAGINADOR DE 4 PANTALLAS) -->
-      <div class="flex items-center justify-between px-6 pb-1 z-20 pointer-events-auto">
-        <button onclick="goToPanel(currentPanel - 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">‹</button>
-        <div class="flex items-center gap-2">
-          <button onclick="goToPanel(0)" id="dot-0" class="w-6 h-1 rounded-full bg-cyan-400 transition-all"></button>
-          <button onclick="goToPanel(1)" id="dot-1" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
-          <button onclick="goToPanel(2)" id="dot-2" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
-          <button onclick="goToPanel(3)" id="dot-3" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
+    <!-- CARÁTULAS Y FORMA -->
+    <aside class="bg-space-card rounded-xl p-3 space-y-4 lg:min-h-0 lg:overflow-y-auto">
+      <div class="space-y-2">
+        <h2 class="panel-title">CARÁTULAS</h2>
+        <div id="face-list" class="space-y-1.5"></div>
+      </div>
+      <div class="space-y-2">
+        <h2 class="panel-title">ASISTENTE MELLINA</h2>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button class="query-btn" data-topic="health"><i data-icon="heartbeat" class="w-4 h-4"></i> Salud</button>
+          <button class="query-btn" data-topic="ship"><i data-icon="rocket-launch" class="w-4 h-4"></i> Nave</button>
+          <button class="query-btn" data-topic="environment"><i data-icon="radioactive" class="w-4 h-4"></i> Ambiente</button>
+          <button class="query-btn" data-topic="full"><i data-icon="stethoscope" class="w-4 h-4"></i> Diagnóstico</button>
         </div>
-        <button onclick="goToPanel(currentPanel + 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">›</button>
+        <button id="assist-stop" class="query-btn w-full justify-center text-slate-400"><i data-icon="stop" class="w-4 h-4"></i> Detener voz</button>
+        <div id="assist-log" class="assist-log space-y-1.5 max-h-64 overflow-y-auto"></div>
       </div>
+      <div class="space-y-2">
+        <h2 class="panel-title">FORMA DEL RELOJ</h2>
+        <div class="grid grid-cols-2 gap-1 p-1 rounded-lg bg-space-900 text-[11px] font-mono">
+          <button id="shape-round" onclick="setWatchShape(true)" class="py-1.5 rounded-md transition">CIRCULAR</button>
+          <button id="shape-square" onclick="setWatchShape(false)" class="py-1.5 rounded-md transition">CUADRADA</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <h2 class="panel-title">ESTADO DEL TRIPULANTE</h2>
+        <div class="w-tile p-3 space-y-1">
+          <div id="side-name" class="text-sm font-bold text-white">—</div>
+          <div id="side-note" class="text-xs text-slate-400 leading-relaxed">—</div>
+        </div>
+      </div>
+    </aside>
+  </main>
 
+  <div id="edge-offline" class="edge-offline" hidden>
+    <div class="edge-offline-card">
+      <i data-icon="cpu" class="w-10 h-10 text-cyan-400"></i>
+      <div class="text-lg font-bold text-white mt-3">Conectando con el Edge Core…</div>
+      <p class="text-sm text-slate-400 mt-2 max-w-sm">El servidor local de la nave no responde. Inícialo con
+        <code class="text-cyan-300">python backend/run.py</code>; esta pantalla se actualiza sola.</p>
     </div>
-
   </div>
 
-  <!-- GUÍA DE ATAJOS Y CONTEXTO -->
-  <footer id="footer-notes" class="text-[11px] text-slate-500 mt-3 text-center max-w-sm space-y-1">
-    <p class="flex items-center justify-center gap-1.5 flex-wrap"><i data-icon="hand-swipe-right" class="w-4 h-4 text-cyan-400"></i><span class="text-slate-400 font-bold">4 Carátulas Deslizables:</span> Vitales · Contramedidas · Salud Mental (0.1Hz) · Test PVT.</p>
-    <p>Biofeedback y tonos relajantes generados localmente con Web Audio API.</p>
-  </footer>
-
+  <script src="vendor/three.min.js"></script>
+  <script src="assistant/config.js"></script>
+  <script src="data/mission-api.js"></script>
+  <script src="assistant/avatar3d.js"></script>
+  <script src="assistant/voice.js"></script>
+  <script src="assistant/listener.js"></script>
+  <script src="assistant/diagnosis.js"></script>
   <script>
-    // DATOS DE LOS 4 TRIPULANTES CON MÓDULO PSICOLÓGICO
-    const CREW = [
-      {
-        name: "Dra. Elena Rostova", init: "ER", sews: 2, status: "NOMINAL", color: "#2dd4bf", badge: "bg-teal-950 border-teal-800 text-teal-300",
-        hr: 64, hrv: 55, rad: 24,
-        action: { title: "Protocolo Nominal ARED / T2", desc: "Todos los biomarcadores están óptimos. Mantener 2.5h de ejercicio cardiovascular y resistivo." },
-        psych: { mood: "calm", label: "Estado: Calmo / Equilibrado", coherence: 92, note: "Reserva cognitiva y autonómica óptimas." }
-      },
-      {
-        name: "Marcus Vance", init: "MV", sews: 10, status: "CRÍTICO", color: "#f8fafc", badge: "bg-white/10 border-slate-300 text-white",
-        hr: 79, hrv: 28, rad: 25,
-        action: { title: "Intensificación ARED Excéntrico", desc: "Atrofia muscular acelerada (-6.8%). Realizar 4 series de sentadillas al 85% 1RM + 35g de proteína." },
-        psych: { mood: "anxious", label: "Estado: Ansioso / Exigido", coherence: 68, note: "Estrés por retraso de tareas de mantenimiento." }
-      },
-      {
-        name: "Dr. Kenji Sato", init: "KS", sews: 9, status: "CRÍTICO", color: "#f8fafc", badge: "bg-white/10 border-slate-300 text-white",
-        hr: 74, hrv: 18, rad: 24,
-        action: { title: "Higiene Circadiana & Earth VR", desc: "Agotamiento autonómico y 3 lapsos de reflejos. Luz de cabina 2200K ámbar y sesión inmersiva de bosque terrestre." },
-        psych: { mood: "exhausted", label: "Estado: Agotado / Burnout", coherence: 45, note: "Aplanamiento vocal severo y deprivación de sueño." }
-      },
-      {
-        name: "Dr. Samuel Miller", init: "SM", sews: 7, status: "ALERTA", color: "#38bdf8", badge: "bg-sky-950 border-sky-800 text-sky-300",
-        hr: 85, hrv: 36, rad: 89,
-        action: { title: "Refugio por Tormenta Solar (SPE)", desc: "Radiación ambiental crítica (89 μSv/h). Traslado inmediato a la bahía de tormenta blindada con agua." },
-        psych: { mood: "focused", label: "Estado: Confinada / Alerta", coherence: 72, note: "Tensión adaptativa moderada por aislamiento en refugio." }
+    const LEVEL = {
+      NOMINAL: { label: "NOMINAL", color: "#2dd4bf" },
+      VIGILAR: { label: "VIGILAR", color: "#38bdf8" },
+      CRITICO: { label: "CRÍTICO", color: "#ef4444" },
+    };
+
+    // Tripulación: sale del motor clínico del Edge Core local (data/mission-api.js), igual que el dashboard.
+    let CREW = [];
+    const LEVEL_OF = { NOMINAL: "NOMINAL", ALERTA_MODERADA: "VIGILAR", ALERTA_CRITICA: "CRITICO" };
+    const URGENCY_RANK = { INMEDIATA: 0, ALTA: 1, MODERADA: 2, PREVENTIVA: 3 };
+
+    // Cuadrante emocional para el check-in de 1 toque.
+    function moodKey(r) {
+      if (r.mood_valence < -0.4 && r.mood_arousal < 0) return "exhausted";
+      if (r.mood_valence < -0.1) return "anxious";
+      if (r.mood_arousal >= 0.3) return "focused";
+      return "calm";
+    }
+
+    function toWatch(a) {
+      const cm = [...a.countermeasures].sort((x, y) => URGENCY_RANK[x.urgency] - URGENCY_RANK[y.urgency])[0];
+      return {
+        id: a.id, name: a.name, role: a.role, photo: a.photo, sews: a.sews, level: LEVEL_OF[a.status],
+        hr: a.vitals.hr, hrv: a.vitals.hrv, rad: a.environment.radiation,
+        action: cm ? { urgency: cm.urgency, title: cm.title, desc: cm.protocol.split("\n")[0].replace(/^1\.\s*/, "") }
+                   : { urgency: "PREVENTIVA", title: "Sin contramedidas activas", desc: "Biomarcadores en rango." },
+        psych: { mood: moodKey(a.raw), coherence: a.psych.coherence, note: a.risks[0] || "Sin riesgos sistémicos detectados." },
+      };
+    }
+
+    async function loadWatchCrew() {
+      try {
+        CREW = (await MissionAPI.loadCrew()).map(toWatch);
+        return true;
+      } catch (err) {
+        document.getElementById("edge-offline").hidden = false;
+        setTimeout(startWatch, 3000);
+        return false;
       }
+    }
+
+    const FACES = [
+      { icon: "pulse", name: "Vitales", desc: "SEWS, pulso, HRV y radiación" },
+      { icon: "lightning", name: "Contramedida", desc: "Protocolo prescrito para confirmar" },
+      { icon: "brain", name: "Mente", desc: "Check-in emocional y respiración 0.1 Hz" },
+      { icon: "scan", name: "Test PVT", desc: "Reflejos en la muñeca" },
+      { icon: "robot", name: "Asistente", desc: "Mellina: consultas por voz" },
     ];
+    const MOODS = { calm: "Calmo / Equilibrado", focused: "Enfocado / Operacional", anxious: "Ansioso / Tensión adaptativa", exhausted: "Agotado / Alerta de burnout" };
 
     let currentCrew = 0;
     let currentPanel = 0;
-    const totalPanels = 4; // 4 Pantallas en el carousel
-    let isCircular = true;
+    const totalPanels = FACES.length;
 
-    // MOTOR DE AUDIO HÁPTICO OFFLINE
+    // AUDIO Y VIBRACIÓN (offline, Web Audio API)
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioContext = null;
-
     function playBeep(freq = 880, duration = 0.08, type = 'sine') {
       try {
         if (!audioContext) audioContext = new AudioCtx();
@@ -273,62 +416,84 @@
         osc.stop(audioContext.currentTime + duration);
       } catch (e) {}
     }
-
     function triggerHaptic(pattern = [80]) {
-      if (navigator.vibrate) navigator.vibrate(pattern);
+      // El navegador solo permite vibrar después de que el usuario haya tocado la pantalla.
+      if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(pattern);
+    }
+
+    // TRIPULACIÓN
+    function renderCrew() {
+      const box = document.getElementById("crew-roster");
+      box.innerHTML = "";
+      CREW.forEach((c, i) => {
+        if (i === currentCrew) return;  // el seleccionado va en la ficha grande
+        const lv = LEVEL[c.level];
+        const tile = document.createElement("button");
+        tile.type = "button";
+        tile.className = `crew-tile${c.level === "CRITICO" ? " is-danger" : ""}`;
+        tile.onclick = () => setCrew(i);
+        tile.innerHTML = `
+          <span class="tile-photo"><img src="${c.photo}" alt="${c.name}">
+            <span class="tile-sews" style="color:${lv.color}">${c.sews}</span></span>
+          <span class="tile-info"><span class="block text-[11px] font-bold text-white truncate">${c.name.replace(/^Dra?\.\s*/, "").split(" ")[0]}</span></span>`;
+        box.appendChild(tile);
+      });
+
+      const c = CREW[currentCrew], lv = LEVEL[c.level];
+      const parts = c.name.replace(/^Dra?\.\s*/, "").split(" ");
+      const title = /^Dra?\./.test(c.name) ? c.name.match(/^Dra?\./)[0] + " " : "";
+      document.getElementById("crew-hero").classList.toggle("is-danger", c.level === "CRITICO");
+      document.getElementById("crew-hero").innerHTML = `
+        <div class="hero-photo"><img src="${c.photo}" alt="${c.name}"></div>
+        <div class="hero-plate">
+          <div class="min-w-0 flex-1">
+            <div class="hero-bar" style="color:${lv.color};background:${lv.color};width:${Math.max(8, c.sews / 15 * 100)}%"></div>
+            <div class="hero-first">${title}${parts.slice(0, -1).join(" ")}</div>
+            <div class="hero-last truncate">${parts[parts.length - 1]}</div>
+            <div class="hero-role truncate">${c.role}</div>
+          </div>
+          <div class="hero-sews" style="color:${lv.color}"><b>${String(c.sews).padStart(2, "0")}</b><span>SEWS · ${lv.label}</span><span class="hero-id">${c.id}</span></div>
+        </div>`;
     }
 
     function setCrew(index) {
       currentCrew = index;
-      const c = CREW[index];
+      const c = CREW[index], lv = LEVEL[c.level];
+      renderCrew();
 
-      [0,1,2,3].forEach(i => {
-        const btn = document.getElementById(`btn-crew-${i}`);
-        if (i === index) {
-          btn.className = "px-2.5 py-1 rounded bg-slate-700 text-white border border-cyan-400 font-bold";
-        } else {
-          btn.className = "px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700";
-        }
-      });
-
-      document.getElementById("astro-initials").innerText = c.init;
-      document.getElementById("watch-sews").innerText = c.sews.toString().padStart(2, '0');
-      document.getElementById("watch-status").innerText = c.status;
-      document.getElementById("watch-status").style.color = c.color;
-      document.getElementById("watch-sews").style.color = c.color;
-      document.getElementById("status-dot").style.color = c.color;
-
-      const circumference = 264;
-      const progress = Math.min(c.sews / 15, 1);
-      const offset = circumference - (circumference * progress);
+      document.getElementById("watch-photo").src = c.photo;
+      document.getElementById("status-icon").style.color = lv.color;
+      const sews = document.getElementById("watch-sews");
+      sews.innerText = c.sews.toString().padStart(2, "0");
+      sews.style.color = lv.color;
+      const status = document.getElementById("watch-status");
+      status.innerText = lv.label;
+      status.style.color = lv.color;
+      status.classList.toggle("is-critical", c.level === "CRITICO");
       const ring = document.getElementById("sews-ring");
-      ring.style.strokeDashoffset = offset;
-      ring.style.stroke = c.color;
+      ring.style.strokeDashoffset = 264 - 264 * Math.min(c.sews / 15, 1);
+      ring.style.stroke = lv.color;
+      ring.style.color = lv.color;
 
       document.getElementById("watch-hr").innerText = `${c.hr} bpm`;
       document.getElementById("watch-hrv").innerText = `${c.hrv} ms`;
       document.getElementById("watch-rad").innerText = `${c.rad} μSv`;
 
+      const urgency = document.getElementById("action-urgency");
+      urgency.innerText = `CONTRAMEDIDA · ${c.action.urgency}`;
+      urgency.style.color = c.action.urgency === "INMEDIATA" ? lv.color : "#64748b";
       document.getElementById("action-title").innerText = c.action.title;
       document.getElementById("action-desc").innerText = c.action.desc;
-      const badge = document.getElementById("action-badge");
-      badge.className = `px-2.5 py-0.5 rounded-full text-[9px] font-mono font-bold border ${c.badge}`;
 
-      // Actualizar Salud Mental
-      document.getElementById("mood-status-label").innerText = c.psych.label;
       document.getElementById("coherence-pct").innerText = `${c.psych.coherence}%`;
+      setMood(c.psych.mood);
 
-      // Resaltar botón de mood correspondiente
-      ['calm', 'focused', 'anxious', 'exhausted'].forEach(m => {
-        const b = document.getElementById(`mood-${m}`);
-        if (m === c.psych.mood) {
-          b.classList.add("ring-2", "ring-cyan-400", "font-bold");
-        } else {
-          b.classList.remove("ring-2", "ring-cyan-400", "font-bold");
-        }
-      });
+      document.getElementById("side-name").innerText = `${c.name} · ${lv.label}`;
+      document.getElementById("side-name").style.color = lv.color;
+      document.getElementById("side-note").innerText = `${MOODS[c.psych.mood]}. ${c.psych.note}`;
+      if (typeof Assistant !== "undefined") Assistant.select(c.id);
 
-      if (c.sews >= 8) {
+      if (c.level === "CRITICO") {
         playBeep(440, 0.2, 'square');
         triggerHaptic([150, 80, 150]);
       } else {
@@ -336,21 +501,32 @@
       }
     }
 
-    // =========================================================================
-    // IMPLEMENTACIÓN DE DRAG TOUCH FÍSICO 1:1 (4 PANELES)
-    // =========================================================================
+    // CARÁTULAS (lista lateral y paginador)
+    function renderFaces() {
+      const list = document.getElementById("face-list");
+      list.innerHTML = "";
+      FACES.forEach((f, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = `face-btn ${i === currentPanel ? "is-active" : ""}`;
+        b.onclick = () => goToPanel(i);
+        b.innerHTML = `<span class="face-icon">${Icons.svg(f.icon)}</span>
+          <span class="min-w-0"><span class="block text-sm font-semibold text-white">${f.name}</span>
+          <span class="block text-[11px] text-slate-400 truncate">${f.desc}</span></span>`;
+        list.appendChild(b);
+      });
+      FACES.forEach((_, i) => {
+        document.getElementById(`page-${i}`).className =
+          `h-1 rounded-full transition-all ${i === currentPanel ? "w-6 bg-cyan-400" : "w-3 bg-[#18202a]"}`;
+      });
+    }
+
+    // ARRASTRE 1:1 ENTRE CARÁTULAS
     const track = document.getElementById("carousel-track");
     const watchScreen = document.getElementById("watch-screen");
+    let isDragging = false, startX = 0, currentDeltaX = 0, dragDistanceTotal = 0, startTime = 0;
 
-    let isDragging = false;
-    let startX = 0;
-    let currentDeltaX = 0;
-    let dragDistanceTotal = 0;
-    let startTime = 0;
-
-    function getPositionX(e) {
-      return e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX;
-    }
+    const getPositionX = e => (e.type.includes('mouse') ? e.clientX : e.changedTouches[0].clientX);
 
     function onDragStart(e) {
       isDragging = true;
@@ -358,68 +534,38 @@
       currentDeltaX = 0;
       dragDistanceTotal = 0;
       startTime = performance.now();
-
       track.style.transition = 'none';
       watchScreen.classList.add("drag-active");
     }
 
     function onDragMove(e) {
       if (!isDragging) return;
-
-      const currentX = getPositionX(e);
-      let deltaX = currentX - startX;
+      let deltaX = getPositionX(e) - startX;
       dragDistanceTotal = Math.abs(deltaX);
-
-      // Efecto Rubber-Banding en extremos (Panel 0 a la derecha o Panel 3 a la izquierda)
-      if ((currentPanel === 0 && deltaX > 0) || (currentPanel === totalPanels - 1 && deltaX < 0)) {
-        deltaX *= 0.25;
-      }
-
+      // Resistencia elástica en los extremos
+      if ((currentPanel === 0 && deltaX > 0) || (currentPanel === totalPanels - 1 && deltaX < 0)) deltaX *= 0.25;
       currentDeltaX = deltaX;
-      const panelWidthPct = 100 / totalPanels;
-      const baseTranslatePct = -currentPanel * panelWidthPct;
-      
-      track.style.transform = `translateX(calc(${baseTranslatePct}% + ${deltaX}px))`;
+      track.style.transform = `translateX(calc(${-currentPanel * 100 / totalPanels}% + ${deltaX}px))`;
     }
 
     function onDragEnd() {
       if (!isDragging) return;
       isDragging = false;
       watchScreen.classList.remove("drag-active");
-
-      const elapsed = performance.now() - startTime;
-      const velocity = Math.abs(currentDeltaX) / Math.max(elapsed, 1);
-
+      const velocity = Math.abs(currentDeltaX) / Math.max(performance.now() - startTime, 1);
       track.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1)';
-
       if ((Math.abs(currentDeltaX) > 40 || velocity > 0.3) && dragDistanceTotal > 12) {
-        if (currentDeltaX < 0 && currentPanel < totalPanels - 1) {
-          currentPanel++;
-          playBeep(1100, 0.04);
-          triggerHaptic([40]);
-        } else if (currentDeltaX > 0 && currentPanel > 0) {
-          currentPanel--;
-          playBeep(900, 0.04);
-          triggerHaptic([40]);
-        }
+        if (currentDeltaX < 0 && currentPanel < totalPanels - 1) currentPanel++;
+        else if (currentDeltaX > 0 && currentPanel > 0) currentPanel--;
+        playBeep(1000, 0.04);
+        triggerHaptic([40]);
       }
-
       updateTrackPosition();
     }
 
     function updateTrackPosition() {
-      const panelWidthPct = 100 / totalPanels;
-      const targetTranslate = -currentPanel * panelWidthPct;
-      track.style.transform = `translateX(${targetTranslate}%)`;
-
-      [0, 1, 2, 3].forEach(i => {
-        const dot = document.getElementById(`dot-${i}`);
-        if (i === currentPanel) {
-          dot.className = "w-6 h-1 rounded-full bg-cyan-400 transition-all";
-        } else {
-          dot.className = "w-3 h-1 rounded-full bg-slate-700 transition-all";
-        }
-      });
+      track.style.transform = `translateX(${-currentPanel * 100 / totalPanels}%)`;
+      renderFaces();
     }
 
     function goToPanel(index) {
@@ -427,35 +573,22 @@
       currentPanel = index;
       track.style.transition = 'transform 0.35s cubic-bezier(0.2, 0.9, 0.4, 1.1)';
       updateTrackPosition();
-      playBeep(900 + (index * 120), 0.03);
+      playBeep(900 + index * 120, 0.03);
     }
 
     watchScreen.addEventListener('touchstart', onDragStart, { passive: true });
     window.addEventListener('touchmove', onDragMove, { passive: true });
     window.addEventListener('touchend', onDragEnd);
     window.addEventListener('touchcancel', onDragEnd);
-
     watchScreen.addEventListener('mousedown', onDragStart);
     window.addEventListener('mousemove', onDragMove);
     window.addEventListener('mouseup', onDragEnd);
 
-    function toggleWatchForm() {
-      isCircular = !isCircular;
-      const chassis = document.getElementById("chassis");
-      const screen = document.getElementById("watch-screen");
-      const bezel = document.getElementById("bezel-ring");
-      const btn = document.getElementById("btn-shape");
-
-      if (isCircular) {
-        chassis.className = chassis.className.replace("rounded-3xl", "rounded-full");
-        screen.className = screen.className.replace("rounded-2xl", "rounded-full");
-        bezel.className = bezel.className.replace("rounded-2xl", "rounded-full");
-        btn.innerText = "Forma: Circular";
-      } else {
-        chassis.className = chassis.className.replace("rounded-full", "rounded-3xl");
-        screen.className = screen.className.replace("rounded-full", "rounded-2xl");
-        bezel.className = bezel.className.replace("rounded-2xl", "rounded-full");
-        btn.innerText = "Forma: Cuadrada";
+    // FORMA DEL RELOJ
+    function setWatchShape(round) {
+      document.getElementById("watch").classList.toggle("is-square", !round);
+      for (const [id, active] of [["shape-round", round], ["shape-square", !round]]) {
+        document.getElementById(id).className = `py-1.5 rounded-md transition ${active ? "bg-cyan-400 text-black font-bold" : "text-slate-400 hover:text-white"}`;
       }
       playBeep(950, 0.04);
     }
@@ -465,32 +598,24 @@
       e.stopPropagation();
       playBeep(1400, 0.15);
       triggerHaptic([80, 50, 80]);
-      alert("Protocolo confirmado en muñeca. Telemetría registrada en memoria local y transmitida al hábitat.");
-      goToPanel(0);
+      const toast = document.getElementById("watch-toast");
+      toast.classList.add("is-on");
+      setTimeout(() => { toast.classList.remove("is-on"); goToPanel(0); }, 1800);
     }
 
-    // =========================================================================
-    // MÓDULO DE SALUD MENTAL: CHECK-IN Y COHERENCIA CARDÍACA
-    // =========================================================================
+    // SALUD MENTAL: CHECK-IN Y COHERENCIA CARDÍACA
+    function setMood(mood) {
+      for (const m of Object.keys(MOODS)) {
+        document.getElementById(`mood-${m}`).className =
+          `py-1.5 rounded-lg text-[10px] font-semibold transition ${m === mood ? "bg-cyan-400 text-black" : "bg-space-800 text-slate-300 hover:bg-space-700"}`;
+      }
+    }
+
     function submitMood(mood, e) {
       if (dragDistanceTotal > 10) return;
       e.stopPropagation();
-
-      const labels = {
-        calm: "Estado: Calmo / Equilibrado",
-        focused: "Estado: Enfocado / Operacional",
-        anxious: "Estado: Ansioso / Tensión adaptativa",
-        exhausted: "Estado: Agotado / Alerta de Burnout"
-      };
-
-      document.getElementById("mood-status-label").innerText = labels[mood];
-
-      ['calm', 'focused', 'anxious', 'exhausted'].forEach(m => {
-        const b = document.getElementById(`mood-${m}`);
-        if (m === mood) b.classList.add("ring-2", "ring-cyan-400", "font-bold");
-        else b.classList.remove("ring-2", "ring-cyan-400", "font-bold");
-      });
-
+      setMood(mood);
+      document.getElementById("side-note").innerText = `${MOODS[mood]}. Check-in registrado.`;
       playBeep(mood === 'exhausted' ? 440 : 1000, 0.08);
       triggerHaptic([60]);
     }
@@ -501,89 +626,65 @@
     function toggleBreathing(e) {
       if (dragDistanceTotal > 10) return;
       e.stopPropagation();
-
       const orb = document.getElementById("breathe-orb");
       const btn = document.getElementById("btn-breathe");
       const text = document.getElementById("breathe-text");
       const sub = document.getElementById("breathe-sub");
 
-      if (!isBreathingActive) {
-        isBreathingActive = true;
-        orb.classList.add("orb-breathing");
-        btn.innerText = "Pausar";
-        btn.className = "px-2.5 py-1.5 bg-slate-100 hover:bg-white active:scale-95 text-black text-[9px] font-black rounded-lg uppercase font-mono tracking-wider";
-        text.innerText = "Inhala suavemente...";
-        sub.innerText = "Sigue la expansión del orbe (4s)";
-        playBeep(528, 0.4, 'sine'); // Tono Solfeggio 528Hz reparador
-
+      isBreathingActive = !isBreathingActive;
+      orb.classList.toggle("orb-breathing", isBreathingActive);
+      btn.innerHTML = Icons.svg(isBreathingActive ? "stop" : "play", "w-4 h-4");
+      btn.className = `w-8 h-8 rounded-full ${isBreathingActive ? "bg-slate-100" : "bg-cyan-400"} text-black grid place-items-center flex-none active:scale-95`;
+      if (isBreathingActive) {
+        text.innerText = "Inhala suavemente";
+        sub.innerText = "Sigue la expansión del orbe";
+        playBeep(528, 0.4);
         let phase = 0;
         breathInterval = setInterval(() => {
           phase = (phase + 1) % 2;
-          if (phase === 0) {
-            text.innerText = "Inhala profundamente...";
-            sub.innerText = "Expansión torácica (4 seg)";
-            playBeep(528, 0.3, 'sine');
-            triggerHaptic([70]);
-          } else {
-            text.innerText = "Exhala lentamente...";
-            sub.innerText = "Vacía pulmones y relaja cuello (6 seg)";
-            playBeep(396, 0.3, 'sine');
-            triggerHaptic([50, 40]);
-          }
+          text.innerText = phase === 0 ? "Inhala profundamente" : "Exhala lentamente";
+          sub.innerText = phase === 0 ? "Expansión torácica · 4 s" : "Relaja cuello y hombros · 6 s";
+          playBeep(phase === 0 ? 528 : 396, 0.3);
+          triggerHaptic(phase === 0 ? [70] : [50, 40]);
         }, 5000);
       } else {
-        isBreathingActive = false;
-        orb.classList.remove("orb-breathing");
         clearInterval(breathInterval);
-        btn.innerText = "Iniciar";
-        btn.className = "px-2.5 py-1.5 bg-cyan-500 hover:bg-cyan-400 active:scale-95 text-black text-[9px] font-black rounded-lg uppercase font-mono tracking-wider";
-        text.innerText = "Coherencia Cardíaca";
+        text.innerText = "Coherencia cardíaca";
         sub.innerText = "Sesión guardada en buffer DTN";
         document.getElementById("coherence-pct").innerText = "94%";
         playBeep(880, 0.1);
       }
     }
 
-    // =========================================================================
     // TEST PVT DE MUÑECA
-    // =========================================================================
-    let pvtTimeout = null;
-    let pvtStartTime = null;
-    let pvtIsReady = false;
+    let pvtTimeout = null, pvtStartTime = null, pvtIsReady = false;
+    const PVT_BOX = "w-full h-24 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-colors";
 
     function startWatchPVT(e) {
       if (dragDistanceTotal > 10) return;
       e.stopPropagation();
-
       const box = document.getElementById("watch-pvt-box");
       const msg = document.getElementById("watch-pvt-msg");
-      const time = document.getElementById("watch-pvt-time");
-      const btn = document.getElementById("watch-pvt-btn");
-
-      time.classList.add("hidden");
-      msg.innerText = "ESPERA ESTÍMULO...";
+      document.getElementById("watch-pvt-time").classList.add("hidden");
+      document.getElementById("watch-pvt-btn").classList.add("hidden");
+      msg.innerText = "Espera el estímulo";
       msg.className = "text-[11px] font-mono text-sky-400 font-bold";
-      box.className = "w-full h-24 rounded-2xl border-2 border-sky-500 bg-sky-950/30 flex flex-col items-center justify-center cursor-pointer transition select-none";
-      btn.classList.add("hidden");
-
+      box.className = `${PVT_BOX} bg-sky-950`;
       pvtIsReady = false;
-      const delay = Math.floor(Math.random() * 2000) + 1200;
-
       pvtTimeout = setTimeout(() => {
         pvtIsReady = true;
         pvtStartTime = performance.now();
-        box.className = "w-full h-24 rounded-2xl border-2 border-slate-300 bg-slate-100 flex flex-col items-center justify-center cursor-pointer transition select-none";
+        box.className = `${PVT_BOX} bg-slate-100`;
         msg.innerText = "¡TOCA YA!";
         msg.className = "text-base font-black text-black font-mono";
         playBeep(1600, 0.1, 'sawtooth');
         triggerHaptic([150]);
-      }, delay);
+      }, Math.floor(Math.random() * 2000) + 1200);
     }
 
     function handleWatchPVTClick(e) {
       if (dragDistanceTotal > 10) return;
       e.stopPropagation();
-
       const box = document.getElementById("watch-pvt-box");
       const msg = document.getElementById("watch-pvt-msg");
       const time = document.getElementById("watch-pvt-time");
@@ -592,35 +693,183 @@
       if (!pvtIsReady && pvtTimeout) {
         clearTimeout(pvtTimeout);
         pvtTimeout = null;
-        msg.innerText = "Falsa alarma (antes de tiempo)";
+        msg.innerText = "Antes de tiempo · repite";
         msg.className = "text-[10px] font-mono text-white";
-        box.className = "w-full h-24 rounded-2xl border-2 border-slate-300 bg-white/5 flex flex-col items-center justify-center cursor-pointer select-none";
+        box.className = `${PVT_BOX} bg-space-800`;
         btn.classList.remove("hidden");
         playBeep(250, 0.15, 'sawtooth');
       } else if (pvtIsReady) {
         const rt = Math.round(performance.now() - pvtStartTime);
+        const ok = rt < 280;
         pvtIsReady = false;
         pvtTimeout = null;
-        msg.innerText = rt < 280 ? "Reflejos Óptimos" : "Fatiga Detectada";
-        msg.className = rt < 280 ? "text-[10px] font-mono text-teal-400" : "text-[10px] font-mono text-white";
+        msg.innerText = ok ? "Reflejos óptimos" : "Fatiga detectada";
+        msg.className = `text-[10px] font-mono ${ok ? "text-teal-400" : "text-white"}`;
         time.innerText = `${rt} ms`;
-        time.className = `text-2xl font-black font-mono ${rt < 280 ? 'text-teal-400' : 'text-white'}`;
-        time.classList.remove("hidden");
-        box.className = "w-full h-24 rounded-2xl border-2 border-teal-500 bg-teal-950/30 flex flex-col items-center justify-center cursor-pointer select-none";
+        time.className = `text-2xl font-black font-mono ${ok ? "text-teal-400" : "text-white"}`;
+        box.className = `${PVT_BOX} ${ok ? "bg-teal-950" : "bg-space-800"}`;
         btn.classList.remove("hidden");
-        playBeep(rt < 280 ? 1200 : 400, 0.1);
+        playBeep(ok ? 1200 : 400, 0.1);
         triggerHaptic([80, 50, 80]);
       }
     }
 
-    // Actualización de reloj
-    setInterval(() => {
-      const d = new Date();
-      document.getElementById("watch-time").innerText = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-    }, 1000);
+    // ASISTENTE MELLINA: holograma, voz y diagnóstico hablado dentro del reloj, 100% local.
+    // Responde con plantillas generadas a partir de los datos del motor clínico (diagnosis.js);
+    // la voz es la del sistema y el micrófono lo transcribe Whisper en el Edge Core.
+    const Assistant = (() => {
+      const D = window.MissionDiagnosis;
+      const $ = id => document.getElementById(id);
+      const caption = $("caption"), mic = $("mic"), face = $("assist-face");
+      let avatar;
+      try {
+        avatar = new HoloAvatar($("avatar"));
+      } catch (err) {
+        console.error(err);
+        avatar = { setMouth() {}, setMode() {}, lookAt() {}, setStatus() {} };
+      }
+      let mission = { crew: [], dtn: null, online: false };
+      let current = null, wantedId = null, greeted = false;
 
-    setCrew(0);
-    updateTrackPosition();
+      const idleCaption = () => `Toca para hablar con ${D.ASSISTANT_NAME}`;
+      const speaking = () => mic.classList.contains("speaking");
+      const voice = new VoiceEngine({
+        onMouth: (open, width) => avatar.setMouth(open, width),
+        onSentence: text => { caption.textContent = text; },
+        onState: state => {
+          avatar.setMode(state);
+          mic.classList.toggle("speaking", state === "speaking");
+          if (state === "idle") setTimeout(() => { if (!speaking() && !listener.busy) caption.textContent = idleCaption(); }, 2500);
+        },
+      });
+
+      function log(who, text, cls) {
+        const p = document.createElement("p");
+        if (cls) p.className = cls;
+        const b = document.createElement("b");
+        b.textContent = who;
+        p.append(b, text);
+        $("assist-log").prepend(p);
+      }
+
+      function say(text) {
+        log(D.ASSISTANT_NAME.toUpperCase(), text);
+        return voice.speak(text);
+      }
+
+      function select(id, announce) {
+        wantedId = id;
+        const m = mission.crew.find(x => x.id === id);
+        if (!m) return;
+        current = m;
+        avatar.setStatus(m.displayStatus);
+        if (announce) say(D.greeting(m));
+      }
+
+      async function refresh() {
+        mission = await D.loadMissionData();
+        select(wantedId || (mission.crew[0] && mission.crew[0].id), false);
+      }
+
+      async function answer(topic) {
+        if (topic === "stop") return voice.stop();
+        avatar.setMode("thinking");
+        await refresh();
+        if (!current) return;
+        const texts = {
+          greeting: () => D.greeting(current),
+          health: () => D.health(current),
+          environment: () => D.environment(current),
+          ship: () => D.ship(current, mission.dtn),
+          full: () => D.full(current, mission.dtn),
+        };
+        return say((texts[topic] || D.unknown)());
+      }
+
+      // Micrófono: Whisper local en el Edge Core.
+      const listener = new VoiceListener({
+        onState: state => {
+          mic.classList.toggle("listening", state === "listening");
+          if (state === "listening") { avatar.setMode("listening"); caption.textContent = "Te escucho…"; }
+          else if (state === "transcribing") { avatar.setMode("thinking"); caption.textContent = "Procesando…"; }
+          else if (!speaking()) avatar.setMode("idle");
+        },
+      });
+
+      async function setupListener() {
+        const engine = await listener.init();
+        mic.disabled = !engine;
+        mic.title = engine ? "" : "Inicia el Edge Core para usar el micrófono (Whisper local); mientras, usa las consultas del panel.";
+        return engine;
+      }
+
+      mic.addEventListener("click", async e => {
+        e.stopPropagation();
+        if (dragDistanceTotal > 10) return;
+        if (listener.busy) return listener.stop();
+        voice.stop();
+        if (!listener.engine) await setupListener();
+        try {
+          const said = await listener.listen();
+          if (!said) { caption.textContent = "No te escuché. Toca el micrófono e inténtalo de nuevo."; return; }
+          log("TÚ", said, "user");
+          const intent = D.intentFrom(said, mission.crew);
+          const index = intent.member ? CREW.findIndex(c => c.id === intent.member.id) : -1;
+          if (index >= 0 && index !== currentCrew) setCrew(index);
+          if (intent.type === "select") say(D.greeting(intent.member));
+          else if (intent.type === "stop") voice.stop();
+          else answer(intent.type);
+        } catch (err) {
+          console.error("[micrófono]", err);
+          caption.textContent = err.name === "NotAllowedError" ? "Necesito permiso para usar el micrófono." : "No pude procesar tu voz.";
+        }
+      });
+
+      // Tocar el holograma: saluda la primera vez y luego da el estado de salud.
+      face.addEventListener("click", e => {
+        if (dragDistanceTotal > 10 || e.target.closest("#mic")) return;
+        if (speaking()) return voice.stop();
+        answer(greeted ? "health" : "greeting");
+        greeted = true;
+      });
+      document.querySelectorAll("[data-topic]").forEach(b => b.addEventListener("click", () => {
+        goToPanel(FACES.length - 1);
+        answer(b.dataset.topic);
+      }));
+      $("assist-stop").addEventListener("click", () => voice.stop());
+
+      // La mirada del holograma sigue al puntero.
+      face.addEventListener("pointermove", e => {
+        const r = face.getBoundingClientRect();
+        avatar.lookAt(((e.clientX - r.left) / r.width - 0.5) * 2, -((e.clientY - r.top) / r.height - 0.4) * 2);
+      });
+      face.addEventListener("pointerleave", () => avatar.lookAt(0, 0));
+
+      caption.textContent = idleCaption();
+      setupListener();
+      setInterval(setupListener, 30000);  // detecta cuando el Edge Core arranca o se detiene
+      refresh();
+
+      return { select: id => select(id, false) };
+    })();
+
+    // HORA
+    function tickClock() {
+      const d = new Date();
+      document.getElementById("watch-time").innerText = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    setWatchShape(true);
+    async function startWatch() {
+      if (!(await loadWatchCrew())) return;
+      document.getElementById("edge-offline").hidden = true;
+      const wanted = CREW.findIndex(c => c.id === new URLSearchParams(location.search).get("crew"));
+      setCrew(Math.max(0, wanted));
+      updateTrackPosition();
+    }
+    startWatch();
   </script>
 </body>
 </html>

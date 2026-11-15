@@ -1,23 +1,15 @@
 /*
- * A-HAMS · Capa de voz del asistente, desacoplada del avatar.
+ * A-HAMS · Capa de voz del asistente, desacoplada del avatar. 100% local.
  *
- * Motores:
- *   'browser' → síntesis del navegador (speechSynthesis). Lip-sync por texto: cada letra se
- *               traduce a un visema (apertura/ancho de boca) y se resincroniza con los eventos
- *               de palabra del motor.
- *   'model'   → voz del Edge Core (ElevenLabs o un modelo propio). POST {text, lang: 'es'|'en'} a VOICE_CONFIG.modelEndpoint y
- *               se espera audio (wav/mp3/ogg). El lip-sync sale de la energía real del audio
- *               (AnalyserNode), así que sirve para cualquier modelo TTS sin tocar el avatar.
- *               Si el endpoint falla, se cae al motor del navegador.
- *
- * El motor 'model' se activa solo cuando el Edge Core informa síntesis disponible (ElevenLabs con clave
- * en backend/.env); para conectar un modelo de voz propio basta con servirlo en ese mismo endpoint.
+ * Usa la síntesis del sistema (speechSynthesis) solo con voces instaladas en el equipo
+ * (localService): las voces "en línea" del navegador se descartan para no salir de la nave.
+ * Lip-sync por texto: cada letra se traduce a un visema (apertura/ancho de boca) y se
+ * resincroniza con los eventos de palabra del motor.
  */
 (function (global) {
   'use strict';
 
   const VOICE_CONFIG = {
-    engine: 'browser',
     language: 'es',
     // Variantes regionales por orden de preferencia para elegir la voz por defecto.
     locales: {
@@ -31,7 +23,6 @@
     },
     rate: 1.0,
     pitch: 1.0,
-    modelEndpoint: `${global.AHAMS_CONFIG.apiBase}/api/voice/tts`,
   };
 
   // [apertura, ancho] por vocal; bilabiales cierran la boca.
@@ -57,7 +48,7 @@
   ].join('|') + ')(?=\\s|\\(|$)');
 
   // Las voces mejoradas suenan mucho más naturales: se prefieren a las compactas.
-  const quality = (v) => (/(Premium|Enhanced|Mejorada|Neural|Natural)/i.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
+  const quality = (v) => (/(Premium|Enhanced|Mejorada|Neural|Natural)/i.test(v.name) ? 1 : 0);
 
   function splitSentences(text) {
     // Solo corta si al signo le sigue un espacio: así "93.1" (decimal en inglés) no se parte.
@@ -74,8 +65,6 @@
       this._voiceByLanguage = {};
       this._token = 0;
       this._lip = null;
-      this._analyser = null;
-      this._audio = null;
       this.supported = 'speechSynthesis' in global;
 
       if (this.supported) {
@@ -91,12 +80,12 @@
       return VOICE_CONFIG.language;
     }
 
-    /** Voces instaladas del idioma activo, sin voces de efectos, de mejor a peor calidad. */
+    /** Voces instaladas en el equipo (sin voces en línea ni de efectos) del idioma activo, de mejor a peor. */
     get voices() {
       if (!this.supported) return [];
       const prefix = VOICE_CONFIG.language + '-';
       return speechSynthesis.getVoices()
-        .filter((v) => v.lang.replace('_', '-').toLowerCase().startsWith(prefix) && !NOVELTY_VOICES.test(v.name))
+        .filter((v) => v.localService && v.lang.replace('_', '-').toLowerCase().startsWith(prefix) && !NOVELTY_VOICES.test(v.name))
         .sort((a, b) => quality(b) - quality(a) || a.name.localeCompare(b.name));
     }
 
@@ -111,11 +100,6 @@
         if (v) return v;
       }
       return voices[0] || null;
-    }
-
-    /** Con síntesis disponible en el Edge Core se usa esa voz; si no, la del sistema. */
-    useServerVoice(enabled) {
-      VOICE_CONFIG.engine = enabled ? 'model' : 'browser';
     }
 
     /** Cambia de idioma y recupera la última voz elegida en ese idioma. */
@@ -134,29 +118,15 @@
 
     async speak(text) {
       this.stop();
-      const token = this._token;
-      if (this.config.engine === 'model') {
-        try {
-          await this._speakModel(text, token);
-          return;
-        } catch (err) {
-          console.warn('[voz] Modelo de voz no disponible, usando voz del navegador:', err);
-        }
-      }
-      if (token === this._token) await this._speakBrowser(text, token);
+      await this._speakBrowser(text, this._token);
     }
 
     stop() {
       this._token++;
       if (this.supported) speechSynthesis.cancel();
-      if (this._audio) {
-        this._audio.pause();
-        this._audio = null;
-      }
       this._finish();
     }
 
-    // ── Motor del navegador ──────────────────────────────────────────
     _speakBrowser(text, token) {
       if (!this.supported) {
         this.onSentence(text);
@@ -193,61 +163,14 @@
       });
     }
 
-    // ── Modelo de voz propio ─────────────────────────────────────────
-    async _speakModel(text, token) {
-      const res = await fetch(this.config.modelEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, lang: VOICE_CONFIG.language }),
-      });
-      if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
-      const blob = await res.blob();
-      if (token !== this._token) return;
-      this.onSentence(text);
-      await this.speakAudio(URL.createObjectURL(blob));
-    }
-
-    /** Reproduce cualquier audio con lip-sync por energía. Útil para el modelo de voz. */
-    async speakAudio(src) {
-      this._ctx = this._ctx || new (global.AudioContext || global.webkitAudioContext)();
-      await this._ctx.resume();
-      const audio = new Audio(src);
-      const source = this._ctx.createMediaElementSource(audio);
-      const analyser = this._ctx.createAnalyser();
-      analyser.fftSize = 1024;
-      source.connect(analyser);
-      analyser.connect(this._ctx.destination);
-      this._audio = audio;
-      this._analyser = analyser;
-      this._buf = new Float32Array(analyser.fftSize);
-      this.onState('speaking');
-      await new Promise((resolve) => {
-        audio.onended = resolve;
-        audio.onerror = resolve;
-        audio.onpause = resolve;
-        audio.play().catch(resolve);
-      });
-      source.disconnect();
-      if (this._audio === audio) this._finish();
-    }
-
     _finish() {
       this._lip = null;
-      this._analyser = null;
       this.onMouth(0, 1);
       this.onState('idle');
     }
 
     _tick() {
       requestAnimationFrame(this._tick);
-      if (this._analyser) {
-        this._analyser.getFloatTimeDomainData(this._buf);
-        let sum = 0;
-        for (let i = 0; i < this._buf.length; i++) sum += this._buf[i] * this._buf[i];
-        const rms = Math.sqrt(sum / this._buf.length);
-        this.onMouth(Math.min(1, Math.max(0, (rms - 0.015) * 7)), 1);
-        return;
-      }
       if (this._lip) {
         const L = this._lip;
         const pos = Math.floor(((performance.now() - L.t0) / 1000) * L.cps);

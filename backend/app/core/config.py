@@ -5,7 +5,7 @@ Las variables de entorno reales tienen prioridad sobre el archivo. Las rutas rel
 """
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -30,51 +30,27 @@ class Settings(BaseSettings):
     server_reload: bool = True
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
 
-    # --- Base de datos. SQLite por defecto (sin servidor, ideal para el Edge);
-    #     PostgreSQL: postgresql+asyncpg://usuario:clave@host:5432/astro_health
+    # --- Base de datos local SQLite (sin servidor, ideal para el Edge)
     database_url: str = "sqlite+aiosqlite:///runtime/astro_health.db"
     auto_create_tables: bool = True
 
     # --- Datos SEWS (motor clínico por días de misión)
     telemetry_data_path: str = "../data/crew_telemetry_sample.json"
     earth_one_way_latency_minutes: float = 14.2
+    # --- Chequeos diarios registrados por los astronautas (persisten entre reinicios)
+    checkins_path: str = "runtime/checkins.json"
+    routine_path: str = "runtime/routine.json"
+    mission_path: str = "runtime/mission.json"
 
-    # --- Modo de IA: auto (en línea si hay claves e internet; si no, offline) | online | offline
-    ai_mode: Literal["auto", "online", "offline"] = "auto"
-
-    # --- Reconocimiento de voz: auto (nube en línea, Whisper local offline) | local | openai | deepgram
-    stt_provider: Literal["auto", "local", "openai", "deepgram"] = "auto"
+    # --- Reconocimiento de voz 100% local (Whisper en el Edge, faster-whisper)
     stt_language: str = "es"
     whisper_model: str = "small"
     whisper_model_dir: str = "models/whisper"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
-    whisper_allow_download: bool = True
-    deepgram_api_key: str = ""
-    deepgram_model: str = "nova-3"
-
-    # --- OpenAI: asistente y copiloto (texto) y STT en línea.
-    #     openai_base_url permite un proxy o un servidor compatible (vacío = API oficial).
-    openai_api_key: str = ""
-    openai_base_url: str = ""
-    openai_model: str = "gpt-4o"
-    openai_whisper_model: str = "whisper-1"
-
-    # --- ElevenLabs (voz del copiloto y del asistente del reloj)
-    elevenlabs_api_key: str = ""
-    elevenlabs_base_url: str = "https://api.elevenlabs.io"
-    elevenlabs_voice_id: str = "21m00Tcm4TlvDq8ikWAM"
-    elevenlabs_model: str = "eleven_turbo_v2_5"
-
-    # --- AWS (opcional: sin esto la Estación en Tierra es un sumidero simulado)
-    aws_region: str = "us-east-1"
-    aws_access_key_id: str = ""
-    aws_secret_access_key: str = ""
-    s3_bucket: str = ""
-    sqs_queue_url: str = ""
-
-    # --- Audio generado (siempre local; S3 es adicional)
-    audio_dir: str = "runtime/audio_out"
+    # False = nunca descargar (operación estrictamente offline). El modelo se instala una sola vez
+    # con scripts/download_whisper_model.py antes de la misión.
+    whisper_allow_download: bool = False
 
     # --- Simulador
     sim_autostart: bool = False
@@ -89,7 +65,7 @@ class Settings(BaseSettings):
     def _split_origins(cls, v):
         return [o.strip() for o in v.split(",") if o.strip()] if isinstance(v, str) else v
 
-    @field_validator("telemetry_data_path", "whisper_model_dir", "audio_dir")
+    @field_validator("telemetry_data_path", "whisper_model_dir", "checkins_path", "routine_path", "mission_path")
     @classmethod
     def _abs_path(cls, v: str) -> str:
         return _resolve(v)

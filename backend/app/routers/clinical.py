@@ -1,11 +1,12 @@
 """API clínica SEWS (Space Early Warning Score) por días de misión.
 
-La consumen el dashboard (frontend/index.html) y el asistente del reloj (frontend/asistente.html).
+La consumen el dashboard (frontend/index.html) y el asistente Mellina dentro del reloj (frontend/smartwatch.html).
 """
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from app.schemas.clinical import HealthStatusReport
+from app.services.forecast import HealthForecast
 from app.services.sews_dataset import SewsDataset
 from app.services.sync_queue import LinkState, Priority
 
@@ -61,6 +62,16 @@ def get_crew_history(crew_id: str, request: Request):
     return rows
 
 
+@router.get("/crew/{crew_id}/forecast", summary="Gemelo digital: proyección de salud a N días, sin y con contramedidas")
+def get_crew_forecast(crew_id: str, request: Request, days: int = 30):
+    if not 1 <= days <= 90:
+        raise HTTPException(status_code=422, detail="days debe estar entre 1 y 90")
+    result = HealthForecast(_dataset(request)).project(crew_id, days)
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Tripulante {crew_id} no encontrado")
+    return result
+
+
 @router.post("/cognitive/pvt-submit", summary="Registra un test PVT y lo encola hacia Tierra")
 async def submit_pvt_test(test: PVTSubmission, request: Request):
     fatigue = test.lapses_count >= 2 or test.mean_reaction_time_ms > 350
@@ -73,6 +84,8 @@ async def submit_pvt_test(test: PVTSubmission, request: Request):
     await request.app.state.sync.enqueue(
         "pvt_test", {**test.model_dump(), "evaluation": evaluation},
         Priority.HIGH if fatigue else Priority.NORMAL, test.crew_id)
+    if request.app.state.sews.report(test.crew_id) is not None:
+        request.app.state.routine.complete(test.crew_id, "pvt", 20)
     return {"status": "RECORDED_LOCAL_EDGE", "evaluation": evaluation,
             "reaction_time_ms": test.mean_reaction_time_ms, "lapses": test.lapses_count,
             "queued_for_earth_sync": True}

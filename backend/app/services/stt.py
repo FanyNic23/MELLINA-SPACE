@@ -1,9 +1,4 @@
-"""Reconocimiento de voz del astronauta (Speech-to-Text).
-
-Proveedores (STT_PROVIDER):
-  auto     → en línea usa la nube (OpenAI o Deepgram, según la clave); offline, Whisper local (por defecto).
-  local    → siempre Whisper vía faster-whisper en el propio Edge, sin internet.
-  openai   → API de OpenAI; deepgram → API de Deepgram (ambos caen a Whisper local si fallan).
+"""Reconocimiento de voz del astronauta (Speech-to-Text) 100% local: Whisper (faster-whisper) en el Edge.
 
 La transcripción local es CPU intensiva: corre en un hilo aparte para no bloquear el event loop
 que comparten el simulador, la ingesta de telemetría y la cola Tierra-Espacio.
@@ -17,25 +12,21 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Optional
 
-import httpx
-
 from app.core.config import Settings
-from app.services.connectivity import Connectivity
-from app.services.llm import LLM, log_failure
 
 log = logging.getLogger("stt")
 
 # Vocabulario de la misión: orienta a Whisper hacia nombres y términos que el asistente espera.
 MISSION_PROMPTS = {
     "es": "Mellina, diagnóstico completo, salud, nave, cabina, ambiente, radiación, "
-          "dióxido de carbono, Elena, Marcus, Kenji, Samuel, tripulante.",
+          "dióxido de carbono, Elena, Marcus, Kenji, Samuel, Diego, tripulante.",
     "en": "Mellina, full diagnosis, health, ship, cabin, environment, radiation, "
-          "carbon dioxide, Elena, Marcus, Kenji, Samuel, crew.",
+          "carbon dioxide, Elena, Marcus, Kenji, Samuel, Diego, crew.",
 }
 
 
 class SpeechUnavailable(RuntimeError):
-    """El proveedor configurado no puede atender (falta modelo, clave o dependencia)."""
+    """Whisper local no puede atender (falta el modelo o la dependencia)."""
 
 
 class InvalidAudio(ValueError):
@@ -139,81 +130,22 @@ class LocalWhisper:
         return await asyncio.to_thread(self._transcribe, audio, language)
 
 
-DEEPGRAM_URL = "https://api.deepgram.com/v1/listen"
-
-
 class SpeechToText:
-    def __init__(self, settings: Settings, llm: LLM, connectivity: Connectivity) -> None:
-        self.s = settings
-        self.llm = llm
-        self.net = connectivity
-        self.local = LocalWhisper(settings)
-        self._http = httpx.AsyncClient(timeout=15)
+    """Fachada del reconocimiento de voz: siempre Whisper local, sin salir de la nave."""
 
-    async def aclose(self) -> None:
-        await self._http.aclose()
+    def __init__(self, settings: Settings) -> None:
+        self.s = settings
+        self.local = LocalWhisper(settings)
 
     async def warm_up(self) -> None:
-        """Whisper local se precarga siempre: es el respaldo de cualquier proveedor en la nube."""
         await self.local.warm_up()
 
-    async def _online_provider(self) -> Optional[str]:
-        """Proveedor en la nube utilizable ahora mismo, o None (→ Whisper local)."""
-        wanted = self.s.stt_provider
-        if wanted == "local":
-            return None
-        for provider in ([wanted] if wanted != "auto" else ["openai", "deepgram"]):
-            if provider == "openai" and await self.llm.ready():
-                return "openai"
-            if provider == "deepgram" and self.s.deepgram_api_key and await self.net.reachable(DEEPGRAM_URL):
-                return "deepgram"
-        return None
-
     async def status(self) -> dict:
-        provider = await self._online_provider() or ("local" if self.local.installed else None)
-        model = {"openai": self.s.openai_whisper_model, "deepgram": self.s.deepgram_model,
-                 "local": self.s.whisper_model}.get(provider)
-        return {"provider": provider, "available": provider is not None, "offline": provider == "local",
-                "model": model, "local_loaded": self.local.loaded, "last_error": self.local.last_error}
+        return {"provider": "local" if self.local.installed else None, "available": self.local.installed,
+                "offline": True, "model": self.s.whisper_model, "local_loaded": self.local.loaded,
+                "last_error": self.local.last_error}
 
-    async def transcribe(self, audio: bytes, filename: str = "voice.webm", content_type: str = "",
-                         language: Optional[str] = None) -> Transcript:
-        """En línea usa la nube; si no hay conexión o la nube falla, Whisper local."""
-        language = language or self.s.stt_language
-        provider = await self._online_provider()
-        if provider:
-            try:
-                if provider == "openai":
-                    return await self._openai(audio, filename, content_type, language)
-                return await self._deepgram(audio, content_type, language)
-            except Exception as exc:
-                log_failure(log, f"STT {provider}", exc)
-                if provider == "openai":
-                    self.llm.failed()
-                else:
-                    self.net.report_failure(DEEPGRAM_URL)
+    async def transcribe(self, audio: bytes, language: Optional[str] = None) -> Transcript:
         if not self.local.installed:
-            raise SpeechUnavailable("Sin conexión y sin Whisper local (pip install -r backend/requirements.txt).")
-        return await self.local.transcribe(audio, language)
-
-    async def _openai(self, audio: bytes, filename: str, content_type: str, language: str) -> Transcript:
-        started = time.perf_counter()
-        r = await self.llm.client.audio.transcriptions.create(
-            model=self.s.openai_whisper_model, language=language,
-            file=(filename or "voice.webm", audio, content_type or "audio/webm"))
-        return Transcript(r.text.strip(), language, "openai", self.s.openai_whisper_model,
-                          processing_ms=round((time.perf_counter() - started) * 1000))
-
-    async def _deepgram(self, audio: bytes, content_type: str, language: str) -> Transcript:
-        started = time.perf_counter()
-        r = await self._http.post(
-            DEEPGRAM_URL,
-            params={"model": self.s.deepgram_model, "language": language, "smart_format": "true"},
-            headers={"Authorization": f"Token {self.s.deepgram_api_key}",
-                     "Content-Type": content_type or "audio/webm"},
-            content=audio,
-        )
-        r.raise_for_status()
-        alt = r.json()["results"]["channels"][0]["alternatives"][0]
-        return Transcript(alt.get("transcript", "").strip(), language, "deepgram", self.s.deepgram_model,
-                          processing_ms=round((time.perf_counter() - started) * 1000))
+            raise SpeechUnavailable("Whisper local no está instalado (pip install -r backend/requirements.txt).")
+        return await self.local.transcribe(audio, language or self.s.stt_language)
