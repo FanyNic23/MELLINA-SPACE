@@ -14,8 +14,8 @@
 
   const STATUS_COLORS = {
     NOMINAL: 0x10b981,
-    ALERTA_MODERADA: 0xf59e0b,
-    ALERTA_CRITICA: 0xf43f5e,
+    ALERTA_MODERADA: 0x38bdf8,
+    ALERTA_CRITICA: 0xf8fafc,
   };
   const HOLO_COLOR = 0x00f2fe;
 

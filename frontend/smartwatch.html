@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>A-HAMS Watch | Astronaut Bio-Wearable UI (Physical, Cognitive & Psychological)</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="icons/icons.js"></script>
   <style>
     @keyframes pulse-ring {
       0% { transform: scale(0.96); opacity: 0.9; }
@@ -52,14 +53,14 @@
   <!-- BARRA DE CONTROLES EXTERNOS PARA DEMOS Y EVALUADORES -->
   <header id="external-controls" class="mb-3 flex flex-wrap items-center justify-center gap-2 max-w-xl text-xs font-mono">
     <a href="index.html" class="px-3 py-1 rounded bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 flex items-center gap-1 transition shadow-sm">
-      <span>←</span> Estación Hábitat
+      <i data-icon="arrow-left" class="w-3.5 h-3.5"></i> Estación Hábitat
     </a>
     <span class="text-slate-500">|</span>
     <span class="text-slate-400">Tripulante:</span>
-    <button onclick="setCrew(0)" id="btn-crew-0" class="px-2.5 py-1 rounded bg-slate-800 text-emerald-400 border border-emerald-700/60 font-bold">Elena</button>
+    <button onclick="setCrew(0)" id="btn-crew-0" class="px-2.5 py-1 rounded bg-slate-800 text-teal-400 border border-teal-700/60 font-bold">Elena</button>
     <button onclick="setCrew(1)" id="btn-crew-1" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Marcus</button>
     <button onclick="setCrew(2)" id="btn-crew-2" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Kenji</button>
-    <button onclick="setCrew(3)" id="btn-crew-3" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Sarah</button>
+    <button onclick="setCrew(3)" id="btn-crew-3" class="px-2.5 py-1 rounded bg-slate-800 text-slate-400 border border-slate-700">Samuel</button>
     <span class="text-slate-500">|</span>
     <button onclick="toggleWatchForm()" id="btn-shape" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
       Forma: Circular
@@ -71,7 +72,7 @@
   </header>
 
   <!-- CHASIS / MARCO FÍSICO DEL SMARTWATCH (Simulador de muñeca) -->
-  <div id="chassis" class="relative w-[360px] h-[360px] sm:w-[390px] sm:h-[390px] rounded-full p-3 bg-gradient-to-b from-slate-700 via-slate-900 to-slate-950 shadow-2xl shadow-cyan-500/10 border-4 border-slate-600 flex items-center justify-center transition-all duration-300">
+  <div id="chassis" class="relative w-[360px] h-[360px] sm:w-[390px] sm:h-[390px] rounded-full p-3 bg-slate-900 shadow-2xl shadow-cyan-500/10 border-4 border-slate-600 flex items-center justify-center transition-all duration-300">
     
     <!-- Bisel interior con textura sutil -->
     <div id="bezel-ring" class="absolute inset-1.5 rounded-full border border-slate-800 pointer-events-none transition-all duration-300"></div>
@@ -83,7 +84,7 @@
       <div class="flex items-center justify-between text-[11px] font-mono text-slate-400 pt-1 px-4 z-20 pointer-events-none">
         <span id="watch-time" class="font-bold">14:32</span>
         <div class="flex items-center gap-1.5">
-          <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span id="status-dot" class="text-teal-400 inline-flex"><i data-icon="pulse" class="w-3 h-3"></i></span>
           <span class="text-[9px] text-slate-500 font-semibold">100% EDGE</span>
         </div>
         <span id="astro-initials" class="text-cyan-400 font-bold">ER</span>
@@ -101,12 +102,12 @@
             <div class="relative w-28 h-28 flex items-center justify-center pointer-events-none">
               <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" stroke="#1e293b" stroke-width="8" fill="transparent" />
-                <circle id="sews-ring" cx="50" cy="50" r="42" stroke="#10b981" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="230" stroke-linecap="round" fill="transparent" class="transition-all duration-700" />
+                <circle id="sews-ring" cx="50" cy="50" r="42" stroke="#2dd4bf" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="230" stroke-linecap="round" fill="transparent" class="transition-all duration-700" />
               </svg>
               <div class="absolute flex flex-col items-center">
                 <span class="text-[9px] font-mono text-slate-400 uppercase">SEWS</span>
-                <span id="watch-sews" class="text-2xl font-black text-emerald-400 leading-none">02</span>
-                <span id="watch-status" class="text-[9px] font-bold text-emerald-400 tracking-wider">NOMINAL</span>
+                <span id="watch-sews" class="text-2xl font-black text-teal-400 leading-none">02</span>
+                <span id="watch-status" class="text-[9px] font-bold text-teal-400 tracking-wider">NOMINAL</span>
               </div>
             </div>
 
@@ -127,7 +128,7 @@
             </div>
 
             <div class="flex items-center gap-1 text-[9px] text-slate-500 font-mono pt-1 pointer-events-none">
-              <span>← Desliza para Contramedidas y Salud Mental →</span>
+              <i data-icon="arrows-left-right" class="w-3 h-3"></i><span>Desliza para Contramedidas y Salud Mental</span>
             </div>
           </div>
 
@@ -146,24 +147,24 @@
           <!-- ================= PANEL 2: SALUD MENTAL Y COHERENCIA CARDÍACA ================= -->
           <div class="carousel-panel space-y-1.5">
             <div class="text-[10px] font-mono text-cyan-400 flex items-center gap-1 justify-center">
-              <span>🧠</span> SALUD MENTAL Y BIOFEEDBACK
+              <i data-icon="brain" class="w-3.5 h-3.5"></i> SALUD MENTAL Y BIOFEEDBACK
             </div>
 
             <!-- MICRO-CHECK-IN DE 1 TOQUE (MODELO EMOCIONAL DE RUSSELL) -->
             <div class="w-full px-1">
               <div class="text-[9px] text-slate-400 font-mono mb-1">Check-in de 1 Toque:</div>
               <div class="grid grid-cols-4 gap-1">
-                <button onclick="submitMood('calm', event)" id="mood-calm" class="py-1 rounded bg-slate-900 border border-emerald-700/60 text-[10px] hover:bg-emerald-950 text-emerald-300">Calmo</button>
+                <button onclick="submitMood('calm', event)" id="mood-calm" class="py-1 rounded bg-slate-900 border border-teal-700/60 text-[10px] hover:bg-teal-950 text-teal-300">Calmo</button>
                 <button onclick="submitMood('focused', event)" id="mood-focused" class="py-1 rounded bg-slate-900 border border-cyan-700/60 text-[10px] hover:bg-cyan-950 text-cyan-300">Enfocado</button>
-                <button onclick="submitMood('anxious', event)" id="mood-anxious" class="py-1 rounded bg-slate-900 border border-amber-700/60 text-[10px] hover:bg-amber-950 text-amber-300">Ansioso</button>
-                <button onclick="submitMood('exhausted', event)" id="mood-exhausted" class="py-1 rounded bg-slate-900 border border-rose-700/60 text-[10px] hover:bg-rose-950 text-rose-300">Agotado</button>
+                <button onclick="submitMood('anxious', event)" id="mood-anxious" class="py-1 rounded bg-slate-900 border border-sky-700/60 text-[10px] hover:bg-sky-950 text-sky-300">Ansioso</button>
+                <button onclick="submitMood('exhausted', event)" id="mood-exhausted" class="py-1 rounded bg-slate-900 border border-slate-300/60 text-[10px] hover:bg-white/10 text-white">Agotado</button>
               </div>
               <div id="mood-status-label" class="text-[9px] font-mono text-slate-400 mt-1">Estado: Calmo / Equilibrado</div>
             </div>
 
             <!-- ESFERA DE RESPIRACIÓN Y COHERENCIA CARDÍACA (0.1 Hz) -->
             <div class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 flex items-center justify-between gap-2 mt-1">
-              <div id="breathe-orb" class="w-12 h-12 rounded-full bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center font-bold text-[9px] text-black shadow-md flex-shrink-0 transition-transform">
+              <div id="breathe-orb" class="w-12 h-12 rounded-full bg-cyan-400 flex items-center justify-center font-bold text-[9px] text-black shadow-md flex-shrink-0 transition-transform">
                 0.1Hz
               </div>
               <div class="text-left flex-1">
@@ -182,11 +183,11 @@
           <!-- ================= PANEL 3: TEST PVT DE PULGAR ================= -->
           <div class="carousel-panel space-y-2">
             <div class="text-[10px] font-mono text-cyan-400 flex items-center gap-1 justify-center">
-              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span> TEST DE VIGILANCIA PVT
+              <i data-icon="scan" class="w-3.5 h-3.5"></i> TEST DE VIGILANCIA PVT
             </div>
             <div id="watch-pvt-box" onclick="handleWatchPVTClick(event)" class="w-full h-24 rounded-2xl border-2 border-dashed border-slate-700 bg-slate-900/60 flex flex-col items-center justify-center cursor-pointer transition select-none">
               <span id="watch-pvt-msg" class="text-[11px] text-slate-400 font-mono text-center px-2">Toca "Iniciar" abajo</span>
-              <span id="watch-pvt-time" class="text-2xl font-black text-emerald-400 hidden font-mono">0 ms</span>
+              <span id="watch-pvt-time" class="text-2xl font-black text-teal-400 hidden font-mono">0 ms</span>
             </div>
             <button id="watch-pvt-btn" onclick="startWatchPVT(event)" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 active:scale-95 text-cyan-300 border border-slate-700 text-[10px] font-bold rounded-full font-mono uppercase">
               Iniciar Test
@@ -201,10 +202,10 @@
       <div class="flex items-center justify-between px-6 pb-1 z-20 pointer-events-auto">
         <button onclick="goToPanel(currentPanel - 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">‹</button>
         <div class="flex items-center gap-2">
-          <button onclick="goToPanel(0)" id="dot-0" class="w-2.5 h-2.5 rounded-full bg-cyan-400 transition-all"></button>
-          <button onclick="goToPanel(1)" id="dot-1" class="w-2 h-2 rounded-full bg-slate-700 transition-all"></button>
-          <button onclick="goToPanel(2)" id="dot-2" class="w-2 h-2 rounded-full bg-slate-700 transition-all"></button>
-          <button onclick="goToPanel(3)" id="dot-3" class="w-2 h-2 rounded-full bg-slate-700 transition-all"></button>
+          <button onclick="goToPanel(0)" id="dot-0" class="w-6 h-1 rounded-full bg-cyan-400 transition-all"></button>
+          <button onclick="goToPanel(1)" id="dot-1" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
+          <button onclick="goToPanel(2)" id="dot-2" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
+          <button onclick="goToPanel(3)" id="dot-3" class="w-3 h-1 rounded-full bg-slate-700 transition-all"></button>
         </div>
         <button onclick="goToPanel(currentPanel + 1)" class="text-slate-500 hover:text-cyan-400 text-xs font-mono font-bold px-2 py-1">›</button>
       </div>
@@ -215,7 +216,7 @@
 
   <!-- GUÍA DE ATAJOS Y CONTEXTO -->
   <footer id="footer-notes" class="text-[11px] text-slate-500 mt-3 text-center max-w-sm space-y-1">
-    <p>🖐️ <span class="text-slate-400 font-bold">4 Carátulas Deslizables:</span> Vitales ↔ Contramedidas ↔ Salud Mental (0.1Hz) ↔ Test PVT.</p>
+    <p class="flex items-center justify-center gap-1.5 flex-wrap"><i data-icon="hand-swipe-right" class="w-4 h-4 text-cyan-400"></i><span class="text-slate-400 font-bold">4 Carátulas Deslizables:</span> Vitales · Contramedidas · Salud Mental (0.1Hz) · Test PVT.</p>
     <p>Biofeedback y tonos relajantes generados localmente con Web Audio API.</p>
   </footer>
 
@@ -223,25 +224,25 @@
     // DATOS DE LOS 4 TRIPULANTES CON MÓDULO PSICOLÓGICO
     const CREW = [
       {
-        name: "Dra. Elena Rostova", init: "ER", sews: 2, status: "NOMINAL", color: "#10b981", badge: "bg-emerald-950 border-emerald-800 text-emerald-300",
+        name: "Dra. Elena Rostova", init: "ER", sews: 2, status: "NOMINAL", color: "#2dd4bf", badge: "bg-teal-950 border-teal-800 text-teal-300",
         hr: 64, hrv: 55, rad: 24,
         action: { title: "Protocolo Nominal ARED / T2", desc: "Todos los biomarcadores están óptimos. Mantener 2.5h de ejercicio cardiovascular y resistivo." },
         psych: { mood: "calm", label: "Estado: Calmo / Equilibrado", coherence: 92, note: "Reserva cognitiva y autonómica óptimas." }
       },
       {
-        name: "Marcus Vance", init: "MV", sews: 10, status: "CRÍTICO", color: "#f43f5e", badge: "bg-rose-950 border-rose-800 text-rose-300",
+        name: "Marcus Vance", init: "MV", sews: 10, status: "CRÍTICO", color: "#f8fafc", badge: "bg-white/10 border-slate-300 text-white",
         hr: 79, hrv: 28, rad: 25,
         action: { title: "Intensificación ARED Excéntrico", desc: "Atrofia muscular acelerada (-6.8%). Realizar 4 series de sentadillas al 85% 1RM + 35g de proteína." },
         psych: { mood: "anxious", label: "Estado: Ansioso / Exigido", coherence: 68, note: "Estrés por retraso de tareas de mantenimiento." }
       },
       {
-        name: "Dr. Kenji Sato", init: "KS", sews: 9, status: "CRÍTICO", color: "#f43f5e", badge: "bg-rose-950 border-rose-800 text-rose-300",
+        name: "Dr. Kenji Sato", init: "KS", sews: 9, status: "CRÍTICO", color: "#f8fafc", badge: "bg-white/10 border-slate-300 text-white",
         hr: 74, hrv: 18, rad: 24,
         action: { title: "Higiene Circadiana & Earth VR", desc: "Agotamiento autonómico y 3 lapsos de reflejos. Luz de cabina 2200K ámbar y sesión inmersiva de bosque terrestre." },
         psych: { mood: "exhausted", label: "Estado: Agotado / Burnout", coherence: 45, note: "Aplanamiento vocal severo y deprivación de sueño." }
       },
       {
-        name: "Dra. Sarah Miller", init: "SM", sews: 7, status: "ALERTA", color: "#f59e0b", badge: "bg-amber-950 border-amber-800 text-amber-300",
+        name: "Dr. Samuel Miller", init: "SM", sews: 7, status: "ALERTA", color: "#38bdf8", badge: "bg-sky-950 border-sky-800 text-sky-300",
         hr: 85, hrv: 36, rad: 89,
         action: { title: "Refugio por Tormenta Solar (SPE)", desc: "Radiación ambiental crítica (89 μSv/h). Traslado inmediato a la bahía de tormenta blindada con agua." },
         psych: { mood: "focused", label: "Estado: Confinada / Alerta", coherence: 72, note: "Tensión adaptativa moderada por aislamiento en refugio." }
@@ -295,7 +296,7 @@
       document.getElementById("watch-status").innerText = c.status;
       document.getElementById("watch-status").style.color = c.color;
       document.getElementById("watch-sews").style.color = c.color;
-      document.getElementById("status-dot").style.backgroundColor = c.color;
+      document.getElementById("status-dot").style.color = c.color;
 
       const circumference = 264;
       const progress = Math.min(c.sews / 15, 1);
@@ -414,9 +415,9 @@
       [0, 1, 2, 3].forEach(i => {
         const dot = document.getElementById(`dot-${i}`);
         if (i === currentPanel) {
-          dot.className = "w-2.5 h-2.5 rounded-full bg-cyan-400 transition-all";
+          dot.className = "w-6 h-1 rounded-full bg-cyan-400 transition-all";
         } else {
-          dot.className = "w-2 h-2 rounded-full bg-slate-700 transition-all";
+          dot.className = "w-3 h-1 rounded-full bg-slate-700 transition-all";
         }
       });
     }
@@ -464,7 +465,7 @@
       e.stopPropagation();
       playBeep(1400, 0.15);
       triggerHaptic([80, 50, 80]);
-      alert("✅ Protocolo confirmado en muñeca. Telemetría registrada en memoria local y transmitida al hábitat.");
+      alert("Protocolo confirmado en muñeca. Telemetría registrada en memoria local y transmitida al hábitat.");
       goToPanel(0);
     }
 
@@ -510,7 +511,7 @@
         isBreathingActive = true;
         orb.classList.add("orb-breathing");
         btn.innerText = "Pausar";
-        btn.className = "px-2.5 py-1.5 bg-rose-500 hover:bg-rose-400 active:scale-95 text-white text-[9px] font-black rounded-lg uppercase font-mono tracking-wider";
+        btn.className = "px-2.5 py-1.5 bg-slate-100 hover:bg-white active:scale-95 text-black text-[9px] font-black rounded-lg uppercase font-mono tracking-wider";
         text.innerText = "Inhala suavemente...";
         sub.innerText = "Sigue la expansión del orbe (4s)";
         playBeep(528, 0.4, 'sine'); // Tono Solfeggio 528Hz reparador
@@ -561,8 +562,8 @@
 
       time.classList.add("hidden");
       msg.innerText = "ESPERA ESTÍMULO...";
-      msg.className = "text-[11px] font-mono text-amber-400 font-bold";
-      box.className = "w-full h-24 rounded-2xl border-2 border-amber-500 bg-amber-950/30 flex flex-col items-center justify-center cursor-pointer transition select-none";
+      msg.className = "text-[11px] font-mono text-sky-400 font-bold";
+      box.className = "w-full h-24 rounded-2xl border-2 border-sky-500 bg-sky-950/30 flex flex-col items-center justify-center cursor-pointer transition select-none";
       btn.classList.add("hidden");
 
       pvtIsReady = false;
@@ -571,9 +572,9 @@
       pvtTimeout = setTimeout(() => {
         pvtIsReady = true;
         pvtStartTime = performance.now();
-        box.className = "w-full h-24 rounded-2xl border-2 border-rose-500 bg-rose-600 flex flex-col items-center justify-center cursor-pointer transition select-none";
+        box.className = "w-full h-24 rounded-2xl border-2 border-slate-300 bg-slate-100 flex flex-col items-center justify-center cursor-pointer transition select-none";
         msg.innerText = "¡TOCA YA!";
-        msg.className = "text-base font-black text-white font-mono";
+        msg.className = "text-base font-black text-black font-mono";
         playBeep(1600, 0.1, 'sawtooth');
         triggerHaptic([150]);
       }, delay);
@@ -592,8 +593,8 @@
         clearTimeout(pvtTimeout);
         pvtTimeout = null;
         msg.innerText = "Falsa alarma (antes de tiempo)";
-        msg.className = "text-[10px] font-mono text-rose-300";
-        box.className = "w-full h-24 rounded-2xl border-2 border-rose-500 bg-rose-950/40 flex flex-col items-center justify-center cursor-pointer select-none";
+        msg.className = "text-[10px] font-mono text-white";
+        box.className = "w-full h-24 rounded-2xl border-2 border-slate-300 bg-white/5 flex flex-col items-center justify-center cursor-pointer select-none";
         btn.classList.remove("hidden");
         playBeep(250, 0.15, 'sawtooth');
       } else if (pvtIsReady) {
@@ -601,11 +602,11 @@
         pvtIsReady = false;
         pvtTimeout = null;
         msg.innerText = rt < 280 ? "Reflejos Óptimos" : "Fatiga Detectada";
-        msg.className = rt < 280 ? "text-[10px] font-mono text-emerald-400" : "text-[10px] font-mono text-rose-400";
+        msg.className = rt < 280 ? "text-[10px] font-mono text-teal-400" : "text-[10px] font-mono text-white";
         time.innerText = `${rt} ms`;
-        time.className = `text-2xl font-black font-mono ${rt < 280 ? 'text-emerald-400' : 'text-rose-400'}`;
+        time.className = `text-2xl font-black font-mono ${rt < 280 ? 'text-teal-400' : 'text-white'}`;
         time.classList.remove("hidden");
-        box.className = "w-full h-24 rounded-2xl border-2 border-emerald-500 bg-emerald-950/30 flex flex-col items-center justify-center cursor-pointer select-none";
+        box.className = "w-full h-24 rounded-2xl border-2 border-teal-500 bg-teal-950/30 flex flex-col items-center justify-center cursor-pointer select-none";
         btn.classList.remove("hidden");
         playBeep(rt < 280 ? 1200 : 400, 0.1);
         triggerHaptic([80, 50, 80]);

@@ -28,9 +28,9 @@ log = logging.getLogger("stt")
 # Vocabulario de la misión: orienta a Whisper hacia nombres y términos que el asistente espera.
 MISSION_PROMPTS = {
     "es": "Mellina, diagnóstico completo, salud, nave, cabina, ambiente, radiación, "
-          "dióxido de carbono, Elena, Marcus, Kenji, Sarah, tripulante.",
+          "dióxido de carbono, Elena, Marcus, Kenji, Samuel, tripulante.",
     "en": "Mellina, full diagnosis, health, ship, cabin, environment, radiation, "
-          "carbon dioxide, Elena, Marcus, Kenji, Sarah, crew.",
+          "carbon dioxide, Elena, Marcus, Kenji, Samuel, crew.",
 }
 
 

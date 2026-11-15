@@ -13,9 +13,9 @@
       --text: #e2e8f0;
       --muted: #94a3b8;
       --cyan: #00f2fe;
-      --emerald: #10b981;
-      --amber: #f59e0b;
-      --rose: #f43f5e;
+      --emerald: #2dd4bf;
+      --amber: #38bdf8;
+      --rose: #f8fafc;
       --status: var(--emerald);
       --watch: min(84vw, 380px);
       --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -24,7 +24,7 @@
     html, body { margin: 0; }
     body {
       min-height: 100vh;
-      background: radial-gradient(circle at 30% 20%, #0e1a30 0%, var(--bg) 60%);
+      background: var(--bg);
       color: var(--text);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       overflow-x: hidden;
@@ -45,7 +45,7 @@
       border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
     }
     .link-badge.online { color: var(--emerald); border-color: rgba(16, 185, 129, 0.4); }
-    .link-badge.offline { color: var(--amber); border-color: rgba(245, 158, 11, 0.4); }
+    .link-badge.offline { color: var(--amber); border-color: rgba(56, 189, 248, 0.4); }
 
     main {
       display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
@@ -56,21 +56,21 @@
     .watch { position: relative; width: var(--watch); flex: none; }
     .strap {
       width: 52%; height: calc(var(--watch) * 0.22); margin: 0 auto;
-      background: linear-gradient(90deg, #0b1220, #18233a 50%, #0b1220);
+      background: #111827;
       border: 1px solid #1a2740;
     }
     .strap.top { border-radius: 14px 14px 4px 4px; border-bottom: none; }
     .strap.bottom { border-radius: 4px 4px 14px 14px; border-top: none; }
     .case {
       position: relative; width: var(--watch); aspect-ratio: 1; border-radius: 50%;
-      background: linear-gradient(145deg, #2a3a57, #0b1322 55%, #1d2a42);
+      background: #1a2333;
       padding: calc(var(--watch) * 0.045);
       box-shadow: 0 30px 60px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.15);
     }
     .crown {
       position: absolute; right: calc(var(--watch) * -0.035); top: 42%;
       width: calc(var(--watch) * 0.05); height: 16%; border-radius: 4px;
-      background: linear-gradient(90deg, #2a3a57, #121c2e); border: 1px solid #33466a;
+      background: #253046; border: 1px solid #33466a;
     }
     .ring { position: absolute; inset: calc(var(--watch) * 0.018); pointer-events: none; transform: rotate(-90deg); }
     .ring circle { fill: none; stroke-width: 2.6; }
@@ -79,7 +79,7 @@
 
     .screen {
       position: relative; width: 100%; height: 100%; border-radius: 50%; overflow: hidden;
-      background: radial-gradient(circle at 50% 38%, #08243a 0%, #030710 70%);
+      background: #050a12;
       box-shadow: inset 0 0 30px rgba(0, 242, 254, 0.12);
       cursor: pointer;
     }
@@ -96,7 +96,6 @@
       font-size: calc(var(--watch) * 0.03); padding: 3px 8px; border-radius: 999px;
       background: rgba(7, 11, 20, 0.7); border: 1px solid var(--status); color: var(--status);
     }
-    .chip i { width: 6px; height: 6px; border-radius: 50%; background: var(--status); }
     .caption {
       position: absolute; left: 14%; right: 14%; bottom: 21%; min-height: 2.8em;
       font-size: calc(var(--watch) * 0.036); line-height: 1.35; text-align: center;
@@ -115,7 +114,7 @@
       display: grid; place-items: center; transition: background 0.2s, box-shadow 0.2s;
     }
     .mic svg { width: 45%; height: 45%; fill: var(--cyan); }
-    .mic.listening { background: rgba(244, 63, 94, 0.25); border-color: var(--rose); box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.15); }
+    .mic.listening { background: rgba(248, 250, 252, 0.25); border-color: var(--rose); box-shadow: 0 0 0 6px rgba(248, 250, 252, 0.15); }
     .mic.listening svg { fill: var(--rose); }
     .mic.speaking { box-shadow: 0 0 0 6px rgba(0, 242, 254, 0.12); }
     .mic:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -170,7 +169,7 @@
 </head>
 <body>
   <header>
-    <a href="smartwatch.html" data-i18n="back">← Reloj</a>
+    <a href="smartwatch.html" class="back-link"><i data-icon="arrow-left"></i> <span data-i18n="back">Reloj</span></a>
     <h1><span>A-HAMS</span> · <span data-i18n="title" style="color: inherit">ASISTENTE DE RELOJ</span></h1>
     <span class="link-badge" id="link-badge">CONECTANDO…</span>
   </header>
@@ -187,7 +186,7 @@
         <div class="screen" id="screen" role="button" tabindex="0" data-i18n-aria="screenAria" aria-label="Hablar con el asistente">
           <canvas id="avatar"></canvas>
           <div class="hud time"><span id="clock">--:--</span><small id="sol">SOL ---</small></div>
-          <div class="hud crew"><span class="chip"><i></i><span id="chip-text">—</span></span></div>
+          <div class="hud crew"><span class="chip"><span id="chip-text">—</span></span></div>
           <div class="caption" id="caption" aria-live="polite"></div>
           <button class="mic" id="mic" data-i18n-aria="micAria" aria-label="Hablar por micrófono">
             <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>
@@ -232,6 +231,7 @@
     </section>
   </main>
 
+  <script src="icons/icons.js"></script>
   <script src="vendor/three.min.js"></script>
   <script src="assistant/config.js"></script>
   <script src="assistant/avatar3d.js"></script>
@@ -248,7 +248,7 @@
       // ── Idioma de la interfaz (el diagnóstico hablado vive en diagnosis.js) ──
       const UI = {
         es: {
-          back: '← Reloj', title: 'ASISTENTE DE RELOJ', crew: 'TRIPULANTE', queries: 'CONSULTAS',
+          back: 'Reloj', title: 'ASISTENTE DE RELOJ', crew: 'TRIPULANTE', queries: 'CONSULTAS',
           health: 'Salud', ship: 'Nave', environment: 'Ambiente', full: 'Diagnóstico completo', stop: 'Detener',
           voice: 'IDIOMA Y VOZ', conversation: 'CONVERSACIÓN', logEmpty: 'Toca el reloj o elige una consulta.',
           screenAria: 'Hablar con el asistente', micAria: 'Hablar por micrófono', panelAria: 'Controles del asistente', voiceAria: 'Voz del asistente',
@@ -272,7 +272,7 @@
           roles: {},
         },
         en: {
-          back: '← Watch', title: 'WATCH ASSISTANT', crew: 'CREW MEMBER', queries: 'QUERIES',
+          back: 'Watch', title: 'WATCH ASSISTANT', crew: 'CREW MEMBER', queries: 'QUERIES',
           health: 'Health', ship: 'Ship', environment: 'Environment', full: 'Full diagnosis', stop: 'Stop',
           voice: 'LANGUAGE & VOICE', conversation: 'CONVERSATION', logEmpty: 'Tap the watch or pick a query.',
           screenAria: 'Talk to the assistant', micAria: 'Speak through the microphone', panelAria: 'Assistant controls', voiceAria: 'Assistant voice',
@@ -295,7 +295,7 @@
           micUnavailable: 'No speech recognition available. Use the panel queries.',
           roles: {
             'Comandante de Misión': 'Mission Commander', 'Ingeniero de Vuelo': 'Flight Engineer',
-            'Oficial Científico': 'Science Officer', 'Especialista Médica': 'Medical Specialist',
+            'Oficial Científico': 'Science Officer', 'Especialista Médico': 'Medical Specialist',
           },
         },
       };

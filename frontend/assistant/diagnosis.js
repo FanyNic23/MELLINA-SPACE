@@ -53,7 +53,7 @@
       countermeasures: [{ id: 'CM-COG-02', title: 'Higiene Circadiana y Terapia Lumínica Dinámica', urgency: 'ALTA', protocol: '1. Ajustar LED de cabina a 460nm (enriquecida en azul) durante horario operativo.' }],
     },
     {
-      id: 'ASTRO-04', name: 'Dra. Sarah Miller', role: 'Especialista Médica', missionDay: 14,
+      id: 'ASTRO-04', name: 'Dr. Samuel Miller', role: 'Especialista Médico', missionDay: 14,
       sews: 7, status: 'ALERTA_MODERADA',
       vitals: { hr: 85, hrv: 36, spo2: 98.2, sys: 120, dia: 78, temp: 36.8 },
       env: { radiation: 89, totalRadiation: null, co2: 2.9, psi: 14.7 },

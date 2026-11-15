@@ -217,7 +217,7 @@ El sistema incluye 4 tripulantes con escenarios clínicos basados en la literatu
 | **Dra. Elena Rostova** | Comandante | **Nominal (Control)** | `02/15` | Mantenimiento estándar: 2.5h ARED/T2. |
 | **Marcus Vance** | Ingeniero de Vuelo | **Atrofia Muscular Acelerada** (-6.8%) por baja adherencia a ARED | `10/15` | Protocolo intensivo excéntrico ARED (85% 1RM) + suplemento de 35g proteína. |
 | **Dr. Kenji Sato** | Oficial Científico | **Fatiga Psicomotriz y Burnout** (HRV: 18ms, 3 lapsos PVT, sueño < 4.5h) | `09/15` | Higiene circadiana (luz ámbar 2200K) + ventana forzada de reposo de 9h. |
-| **Dra. Sarah Miller** | Especialista Médica | **Evento de Partículas Solares (SPE)** (Radiación ambiental 89 μSv/h) | `07/15` | Evacuación inmediata a bahía blindada central hasta normalización (<25 μSv/h). |
+| **Dr. Samuel Miller** | Especialista Médico | **Evento de Partículas Solares (SPE)** (Radiación ambiental 89 μSv/h) | `07/15` | Evacuación inmediata a bahía blindada central hasta normalización (<25 μSv/h). |
 
 ---
 
