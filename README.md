@@ -85,7 +85,12 @@ flowchart TD
   * **Fototerapia dinámica** (ajuste espectral LED a 460nm o 2200K ámbar) para sincronización circadiana.
   * **Sobrecarga excéntrica ARED** y suplementación nutricional para atrofia muscular acelerada.
   * **Evacuación a la Bahía de Tormenta blindada** en eventos de radiación solar (SPE).
-* 🧠 **Test Neurocognitivo PVT (Psychomotor Vigilance Task) en Vivo:** Implementación interactiva del test psicomotor oficial de la NASA para medir reflejos y fatiga en milisegundos directamente en el navegador.
+* 🧠 **Salud Mental y Monitoreo Psicológico Multimodal:**
+  * **Biomarcador acústico de voz:** Detección de fatiga y depresión por aplanamiento prosódico y pausas del habla.
+  * **Micro-checkin emocional de 1 toque:** Basado en el Modelo Circumplejo de Russell (Valencia y Activación).
+  * **Biofeedback de Coherencia Cardíaca 0.1 Hz:** Respiración guiada en el smartwatch (4s inhalar, 6s exhalar) con pulsos hápticos y tonos armónicos reparadores.
+  * **Contramedida para Privación Sensorial (Earth VR):** Simulación sensorial inmersiva de entornos terrestres con audio biofílico offline.
+* ⚡ **Test Neurocognitivo PVT (Psychomotor Vigilance Task) en Vivo:** Implementación interactiva del test psicomotor oficial de la NASA para medir reflejos y fatiga en milisegundos directamente en el navegador.
 * 📡 **Buffer DTN (Delay-Tolerant Networking):** Encola los reportes en un almacenamiento local resiliente para su transmisión asíncrona hacia el Centro de Control de Vuelo cuando haya ventana de línea de vista.
 * 🔌 **Patrón Adaptador para Datos de la NASA:** Preparado con un adaptador desacoplado para consumir cualquier formato de datos oficial (CSV, JSON, etc.) entregado el día del hackatón.
 

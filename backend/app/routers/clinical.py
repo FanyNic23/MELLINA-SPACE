@@ -18,6 +18,19 @@ class PVTSubmission(BaseModel):
     lapses_count: int
 
 
+class MoodSubmission(BaseModel):
+    crew_id: str
+    quadrant: str  # "calm", "focused", "exhausted", "anxious"
+    valence: float  # -1.0 a +1.0
+    arousal: float  # -1.0 a +1.0
+
+
+class CoherenceSubmission(BaseModel):
+    crew_id: str
+    duration_seconds: int
+    coherence_pct: float
+
+
 def _dataset(request: Request) -> SewsDataset:
     return request.app.state.sews
 
@@ -63,6 +76,30 @@ async def submit_pvt_test(test: PVTSubmission, request: Request):
     return {"status": "RECORDED_LOCAL_EDGE", "evaluation": evaluation,
             "reaction_time_ms": test.mean_reaction_time_ms, "lapses": test.lapses_count,
             "queued_for_earth_sync": True}
+
+
+@router.post("/psych/checkin", summary="Check-in emocional de 1 toque (modelo de Russell) encolado hacia Tierra")
+async def submit_mood_checkin(mood: MoodSubmission, request: Request):
+    low_mood = mood.quadrant == "exhausted" or mood.valence < -0.4
+    if low_mood:
+        intervention = "Recomendada sesión de Terapia Inmersiva Terrestre (Earth VR) y ajuste circadiano."
+    elif mood.quadrant == "anxious":
+        intervention = "Recomendada sesión de 3 minutos de Coherencia Cardíaca 0.1Hz en smartwatch."
+    else:
+        intervention = "Ninguna intervención requerida."
+    await request.app.state.sync.enqueue(
+        "mood_checkin", {**mood.model_dump(), "intervention": intervention},
+        Priority.HIGH if low_mood else Priority.NORMAL, mood.crew_id)
+    return {"status": "RECORDED_LOCAL_EDGE", "mood_state": mood.quadrant, "intervention": intervention,
+            "queued_for_earth_sync": True}
+
+
+@router.post("/psych/coherence-submit", summary="Registra una sesión de biofeedback de coherencia cardíaca")
+async def submit_coherence_session(coherence: CoherenceSubmission, request: Request):
+    await request.app.state.sync.enqueue(
+        "coherence_session", coherence.model_dump(), Priority.NORMAL, coherence.crew_id)
+    return {"status": "COHERENCE_SESSION_LOGGED", "coherence_score": coherence.coherence_pct,
+            "autonomic_balance": "Restaura tono parasimpático y modula respuesta de amígdala."}
 
 
 @router.get("/dtn/status", summary="Enlace Tierra-Espacio: estado, latencia y paquetes en cola")

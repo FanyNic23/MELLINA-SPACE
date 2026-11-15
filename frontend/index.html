@@ -201,6 +201,71 @@
           </div>
         </div>
 
+        <!-- MÓDULO DE SALUD MENTAL, AFECTO Y PRIVACIÓN SENSORIAL -->
+        <div class="bg-gradient-to-br from-space-card to-space-800 border border-space-border rounded-xl p-5 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-space-border pb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <span>🧠</span> Salud Mental, Afecto y Privación Sensorial
+              </h3>
+              <p class="text-xs text-slate-400">Monitoreo pasivo multimodal: Prosodia y aplanamiento vocal, coherencia cardíaca y check-in emocional.</p>
+            </div>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800 text-cyan-300">EDGE AI OFFLINE</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Biomarcador Vocal -->
+            <div class="bg-space-900 border border-space-border rounded-lg p-3">
+              <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                <span>ESTRÉS VOCAL</span>
+                <span id="voice-stress-badge" class="text-emerald-400 font-bold">0.22</span>
+              </div>
+              <div class="w-full bg-space-800 h-2 rounded-full mt-2 overflow-hidden">
+                <div id="voice-stress-bar" class="bg-emerald-400 h-full transition-all" style="width: 22%"></div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2" id="voice-stress-desc">Prosodia y tono acústico balanceado.</div>
+            </div>
+
+            <!-- Coherencia Cardíaca -->
+            <div class="bg-space-900 border border-space-border rounded-lg p-3">
+              <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                <span>COHERENCIA (0.1Hz)</span>
+                <span id="coherence-badge" class="text-cyan-300 font-bold">92%</span>
+              </div>
+              <div class="w-full bg-space-800 h-2 rounded-full mt-2 overflow-hidden">
+                <div id="coherence-bar" class="bg-cyan-400 h-full transition-all" style="width: 92%"></div>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-2" id="coherence-desc">Sincronía respiratoria-cardíaca alta.</div>
+            </div>
+
+            <!-- Privación Sensorial -->
+            <div class="bg-space-900 border border-space-border rounded-lg p-3">
+              <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                <span>PRIVACIÓN SENSORIAL</span>
+                <span id="sensory-badge" class="text-emerald-400 font-bold">BAJO</span>
+              </div>
+              <div class="text-xs font-bold text-white mt-1" id="mood-label">Calmo / Equilibrado</div>
+              <div class="text-[10px] text-slate-400 mt-1">Check-in emocional: Sol 14.</div>
+            </div>
+          </div>
+
+          <!-- CONTRAMEDIDA INTERACTIVA: EARTH VR SIMULATOR -->
+          <div class="bg-space-900/80 border border-space-border rounded-lg p-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-emerald-950 border border-emerald-800 flex items-center justify-center text-lg text-emerald-400">
+                🌲
+              </div>
+              <div>
+                <div class="text-xs font-bold text-white">Contramedida de Descompresión Sensorial (Earth VR)</div>
+                <div class="text-[11px] text-slate-400">Generador de sonidos biofílicos terrestres (lluvia suave y brisa) para mitigar monotonía espacial.</div>
+              </div>
+            </div>
+            <button onclick="toggleEarthVR()" id="btn-vr-sound" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs font-mono uppercase transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20">
+              <span>▶</span> Iniciar Sesión Earth VR
+            </button>
+          </div>
+        </div>
+
       </div>
 
       <!-- COLUMNA 3: MOTOR DE DECISIÓN CLÍNICA Y CONTRAMEDIDAS -->
@@ -288,6 +353,7 @@
         cognitive: { rt: 235, lapses: 0, sleep: 7.4, voice_stress: 0.22 },
         muscle: { delta: -1.1, exercise_pct: 95 },
         environment: { radiation: 24, co2: 3.1 },
+        psych: { voice: 0.22, coherence: 92, mood: "Calmo / Equilibrado", sensory: "BAJO", desc: "Prosodia y tono acústico balanceado." },
         risks: [],
         countermeasures: [
           {
@@ -317,6 +383,7 @@
         cognitive: { rt: 265, lapses: 1, sleep: 6.2, voice_stress: 0.45 },
         muscle: { delta: -6.8, exercise_pct: 42 },
         environment: { radiation: 25, co2: 3.2 },
+        psych: { voice: 0.45, coherence: 68, mood: "Ansioso / Sobrecargado", sensory: "MODERADO", desc: "Tono tenso por retraso en mantenimiento de soporte vital." },
         risks: [
           "Atrofia muscular acelerada (-6.8% vs baseline de misión)",
           "Incumplimiento crítico de protocolo ARED por alta carga de mantenimiento",
@@ -350,20 +417,22 @@
         cognitive: { rt: 395, lapses: 3, sleep: 4.1, voice_stress: 0.82 },
         muscle: { delta: -2.1, exercise_pct: 88 },
         environment: { radiation: 24, co2: 3.8 },
+        psych: { voice: 0.82, coherence: 45, mood: "Agotado / Burnout Severo", sensory: "SEVERO", desc: "Aplanamiento prosódico crítico, letargo y deprivación de sueño." },
         risks: [
           "Agotamiento neurovegetativo severo (HRV crítico: 18 ms)",
           "Riesgo operacional elevado por fatiga psicomotriz (3 lapsos PVT > 500ms)",
           "Deprivación aguda de sueño (< 4.5 horas registradas)",
-          "Biomarcador vocal indica distrés agudo / burnout"
+          "Biomarcador vocal indica distrés agudo / burnout",
+          "Privación sensorial severa y riesgo de depresión por confinamiento"
         ],
         countermeasures: [
           {
-            id: "CM-COG-02",
-            category: "Neurocognitivo / Circadiano",
-            title: "Higiene Circadiana & Descanso Obligatorio Operativo",
+            id: "CM-PSY-04",
+            category: "Salud Mental / Psicológica",
+            title: "Descompresión Psico-Respiratoria & Terapia Earth VR",
             urgency: "INMEDIATA",
-            protocol: "Restricción temporal de operaciones críticas de laboratorio. Ajuste de espectro lumínico de cabina a modo descanso (luz ámbar 2200K sin componente azul). Sesión guiada de coherencia cardíaca.",
-            dosage: "Ventana de reposo forzado de 9 horas ininterrumpidas."
+            protocol: "1. Sesión de 3 min de Coherencia Cardíaca 0.1Hz en smartwatch.\n2. Inmersión de 15 min en visor VR simulando bosque templado terrestre.\n3. Luz de cabina 2200K ámbar y ventana de reposo forzado de 9h.",
+            dosage: "1 sesión previa al período de descanso por 3 días."
           }
         ],
         history: {
@@ -384,6 +453,7 @@
         cognitive: { rt: 252, lapses: 0, sleep: 6.8, voice_stress: 0.38 },
         muscle: { delta: -1.8, exercise_pct: 92 },
         environment: { radiation: 89, co2: 2.9 },
+        psych: { voice: 0.38, coherence: 72, mood: "Alerta / Confinada", sensory: "MODERADO", desc: "Estrés agudo adaptativo por confinamiento en refugio blindado." },
         risks: [
           "Tasa de radiación ambiental crítica (89 μSv/h) por Evento de Partículas Solares",
           "Dosis acumulada acelerada de radiación espacial"
@@ -545,8 +615,89 @@
         cmContainer.appendChild(cmDiv);
       });
 
+      // Actualizar Salud Mental y Afecto
+      if (astro.psych) {
+        document.getElementById("voice-stress-badge").innerText = astro.psych.voice;
+        const voiceBar = document.getElementById("voice-stress-bar");
+        voiceBar.style.width = `${Math.round(astro.psych.voice * 100)}%`;
+        if (astro.psych.voice > 0.7) {
+          voiceBar.className = "bg-rose-500 h-full transition-all";
+          document.getElementById("voice-stress-badge").className = "text-rose-400 font-bold";
+        } else if (astro.psych.voice > 0.4) {
+          voiceBar.className = "bg-amber-500 h-full transition-all";
+          document.getElementById("voice-stress-badge").className = "text-amber-400 font-bold";
+        } else {
+          voiceBar.className = "bg-emerald-400 h-full transition-all";
+          document.getElementById("voice-stress-badge").className = "text-emerald-400 font-bold";
+        }
+        document.getElementById("voice-stress-desc").innerText = astro.psych.desc;
+
+        document.getElementById("coherence-badge").innerText = `${astro.psych.coherence}%`;
+        const cohBar = document.getElementById("coherence-bar");
+        cohBar.style.width = `${astro.psych.coherence}%`;
+        cohBar.className = astro.psych.coherence < 60 ? "bg-rose-500 h-full transition-all" : "bg-cyan-400 h-full transition-all";
+        document.getElementById("coherence-desc").innerText = astro.psych.coherence < 60 ? "Desbalance autonómico simpático (estrés)." : "Sincronía respiratoria-cardíaca alta.";
+
+        const sensoryBadge = document.getElementById("sensory-badge");
+        sensoryBadge.innerText = astro.psych.sensory;
+        sensoryBadge.className = astro.psych.sensory === "SEVERO" ? "text-rose-400 font-bold" : astro.psych.sensory === "MODERADO" ? "text-amber-400 font-bold" : "text-emerald-400 font-bold";
+        document.getElementById("mood-label").innerText = astro.psych.mood;
+      }
+
       // Actualizar Gráfica
       updateChart(astro);
+    }
+
+    // SIMULADOR DE AUDIO BIOFÍLICO EARTH VR (OFFLINE SINTETIZADO)
+    let vrAudioActive = false;
+    let vrAudioContext = null;
+    let vrNoiseNode = null;
+
+    function toggleEarthVR() {
+      const btn = document.getElementById("btn-vr-sound");
+      if (!vrAudioActive) {
+        vrAudioActive = true;
+        btn.innerHTML = "<span>■</span> Detener Earth VR";
+        btn.className = "px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs font-mono uppercase transition flex items-center gap-1.5 shadow-md shadow-rose-600/20";
+        
+        try {
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!vrAudioContext) vrAudioContext = new AC();
+          
+          const bufferSize = vrAudioContext.sampleRate * 2;
+          const noiseBuffer = vrAudioContext.createBuffer(1, bufferSize, vrAudioContext.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          const whiteNoise = vrAudioContext.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+          whiteNoise.loop = true;
+
+          const filter = vrAudioContext.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(450, vrAudioContext.currentTime);
+
+          const gain = vrAudioContext.createGain();
+          gain.gain.setValueAtTime(0.06, vrAudioContext.currentTime);
+
+          whiteNoise.connect(filter);
+          filter.connect(gain);
+          gain.connect(vrAudioContext.destination);
+          whiteNoise.start();
+          vrNoiseNode = { source: whiteNoise, gain: gain };
+        } catch (e) {}
+
+        alert("[EARTH VR SESIÓN ACTIVA]: Entorno biofílico iniciado en visor del hábitat: 'Bosque de Secuoyas y Lluvia Suave'. Disminuyendo frecuencia de luz a 2200K.");
+      } else {
+        vrAudioActive = false;
+        btn.innerHTML = "<span>▶</span> Iniciar Sesión Earth VR";
+        btn.className = "px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-black font-bold text-xs font-mono uppercase transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20";
+        if (vrNoiseNode) {
+          try { vrNoiseNode.source.stop(); } catch (e) {}
+          vrNoiseNode = null;
+        }
+      }
     }
 
     // ACTUALIZAR GRÁFICA LONGITUDINAL
