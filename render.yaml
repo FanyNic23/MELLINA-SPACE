@@ -1,10 +1,10 @@
-# Render Blueprint · demo pública de A-HAMS (plan gratuito: 512 MB, 0.1 CPU; imagen del Dockerfile).
+# Render Blueprint · A-HAMS en producción (plan gratuito: 512 MB, 0.1 CPU; imagen del Dockerfile).
 services:
   - type: web
-    name: ahams
+    name: A-HAMS
     runtime: docker
     plan: free
-    branch: dev
+    branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     autoDeploy: true

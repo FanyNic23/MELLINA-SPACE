@@ -201,7 +201,7 @@ La imagen incluye la interfaz compilada y el modelo Whisper; en ejecución no de
 
 ### Demo pública en Render (gratis)
 
-El repositorio incluye `render.yaml`: en [render.com](https://render.com) → **New → Blueprint** → este repositorio (rama `dev`). Render construye la imagen del `Dockerfile` y la publica con HTTPS; cada `git push` a `dev` la vuelve a desplegar.
+El repositorio incluye `render.yaml`: en [render.com](https://render.com) → **New → Blueprint** → este repositorio (rama `main`, producción). Render construye la imagen del `Dockerfile` y la publica con HTTPS; cada `git push` a `main` la vuelve a desplegar. El trabajo diario sigue en `dev`.
 
 * Plan gratuito: 512 MB y 0.1 CPU. Por eso la imagen usa Whisper `tiny` (unos 13 s por orden de voz) y el servicio se duerme tras 15 min sin visitas (despierta en ~1 min).
 * Los datos de la demo (chequeos, rutina, simulación) se reinician cuando el servicio se reinicia.
