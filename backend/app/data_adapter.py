@@ -9,12 +9,13 @@ El resto de tu sistema (UI, motor clínico, contramedidas) NO necesita modificar
 """
 
 from typing import Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from app.models import (
     TelemetryRecord,
     VitalMetrics,
     EnvironmentalMetrics,
     CognitiveMetrics,
+    PsychologicalMetrics,
     MusculoskeletalMetrics
 )
 
@@ -30,9 +31,8 @@ class NASADataAdapter:
         Adapta un diccionario genérico (o fila de CSV convertida a dict).
         Modifica este método el día del hackatón según los nombres de columna del dataset de la NASA.
         """
-        # Mapeo tolerante con valores por defecto en caso de columnas ausentes
         return TelemetryRecord(
-            timestamp=datetime.fromisoformat(raw.get("timestamp", datetime.utcnow().isoformat())),
+            timestamp=datetime.fromisoformat(raw.get("timestamp", datetime.now(timezone.utc).isoformat())),
             crew_member_id=str(raw.get("crew_id", raw.get("subject_id", "ASTRO-01"))),
             vitals=VitalMetrics(
                 heart_rate_bpm=float(raw.get("heart_rate", raw.get("hr", 72.0))),
@@ -53,6 +53,13 @@ class NASADataAdapter:
                 pvt_lapses_count=int(raw.get("pvt_lapses", raw.get("lapses", 0))),
                 voice_stress_index=float(raw.get("voice_stress", raw.get("stress_score", 0.25))),
                 reported_sleep_hours=float(raw.get("sleep_hours", raw.get("total_sleep", 7.2)))
+            ),
+            psychological=PsychologicalMetrics(
+                mood_valence=float(raw.get("mood_valence", raw.get("valence", 0.1))),
+                mood_arousal=float(raw.get("mood_arousal", raw.get("arousal", 0.0))),
+                voice_acoustic_stress=float(raw.get("voice_stress", raw.get("stress_score", 0.25))),
+                coherence_score_pct=float(raw.get("coherence_pct", 82.0)),
+                sensory_deprivation_risk=str(raw.get("sensory_risk", "BAJO"))
             ),
             musculoskeletal=MusculoskeletalMetrics(
                 muscle_mass_delta_pct=float(raw.get("muscle_delta_pct", raw.get("lean_mass_diff", -1.2))),

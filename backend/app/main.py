@@ -1,6 +1,7 @@
 """
 Autonomous Health Assessment & Monitoring System (A-HAMS) - Backend API
 FastAPI local edge server for spacecraft habitat.
+Includes Physical, Cognitive, Environmental, and Psychological Telemetry.
 """
 
 import json
@@ -16,8 +17,8 @@ from app.clinical_engine import SpaceClinicalEngine
 
 app = FastAPI(
     title="NASA Deep Space Health & Autonomous Medical Engine",
-    description="Edge clinical decision system for long-duration missions with delay-tolerant synchronization.",
-    version="1.0.0"
+    description="Edge clinical decision system for long-duration missions with delay-tolerant synchronization and psychological health.",
+    version="1.1.0"
 )
 
 # Permitir CORS para desarrollo y UI local
@@ -45,6 +46,17 @@ class PVTSubmission(BaseModel):
     mean_reaction_time_ms: float
     lapses_count: int
 
+class MoodSubmission(BaseModel):
+    crew_id: str
+    quadrant: str  # "calm", "focused", "exhausted", "anxious"
+    valence: float # -1.0 to +1.0
+    arousal: float # -1.0 to +1.0
+
+class CoherenceSubmission(BaseModel):
+    crew_id: str
+    duration_seconds: int
+    coherence_pct: float
+
 
 @app.get("/")
 def root():
@@ -52,6 +64,7 @@ def root():
         "system": "A-HAMS Edge Medical Core",
         "mission": "Mars Transit Vehicle (MTV-1)",
         "mode": "AUTONOMOUS_OFFLINE_EDGE",
+        "modules": ["Cardiovascular", "Musculoskeletal", "Neurocognitive", "Psychological", "DTN_Sync"],
         "status": "OPERATIONAL"
     }
 
@@ -65,7 +78,6 @@ def get_crew_overview():
     if not raw_data:
         raise HTTPException(status_code=404, detail="No hay datos de telemetría cargados.")
 
-    # Agrupar por astronauta y tomar el registro más reciente
     crew_map = {}
     for record in raw_data:
         cid = record["crew_id"]
@@ -90,6 +102,7 @@ def get_crew_overview():
             "status": report.status_label,
             "risks_count": len(report.systemic_risks),
             "vitals": telemetry.vitals.dict(),
+            "psychological": telemetry.psychological.dict() if telemetry.psychological else None,
             "latest_record": raw_rec
         })
 
@@ -155,6 +168,51 @@ def submit_pvt_test(test: PVTSubmission):
         "reaction_time_ms": test.mean_reaction_time_ms,
         "lapses": test.lapses_count,
         "queued_for_earth_sync": True
+    }
+
+
+@app.post("/api/psych/checkin")
+def submit_mood_checkin(mood: MoodSubmission):
+    """
+    Registra el micro-checkin emocional de 1 toque (Modelo de Russell: Valencia y Arousal).
+    """
+    dtn_buffer_queue.append({
+        "type": "MOOD_CHECKIN_EVENT",
+        "crew_id": mood.crew_id,
+        "quadrant": mood.quadrant,
+        "valence": mood.valence,
+        "arousal": mood.arousal
+    })
+
+    intervention = "Ninguna intervención requerida."
+    if mood.quadrant == "exhausted" or mood.valence < -0.4:
+        intervention = "Recomendada sesión de Terapia Inmersiva Terrestre (Earth VR) y ajuste circadiano."
+    elif mood.quadrant == "anxious":
+        intervention = "Recomendada sesión de 3 minutos de Coherencia Cardíaca 0.1Hz en smartwatch."
+
+    return {
+        "status": "RECORDED_LOCAL_EDGE",
+        "mood_state": mood.quadrant,
+        "intervention": intervention,
+        "queued_for_earth_sync": True
+    }
+
+
+@app.post("/api/psych/coherence-submit")
+def submit_coherence_session(coherence: CoherenceSubmission):
+    """
+    Registra la finalización de una sesión de biofeedback respiratorio en el smartwatch.
+    """
+    dtn_buffer_queue.append({
+        "type": "BIOFEEDBACK_COHERENCE_EVENT",
+        "crew_id": coherence.crew_id,
+        "duration_sec": coherence.duration_seconds,
+        "coherence_pct": coherence.coherence_pct
+    })
+    return {
+        "status": "COHERENCE_SESSION_LOGGED",
+        "coherence_score": coherence.coherence_pct,
+        "autonomic_balance": "Restaura tono parasimpático y modula respuesta de amígdala."
     }
 
 

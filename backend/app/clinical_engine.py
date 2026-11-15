@@ -1,6 +1,7 @@
 """
 Clinical Decision Support Engine (CDSS) for Space Medicine
 Implements Space Early Warning Score (SEWS) and Autonomous Countermeasure Prescriptions
+Includes Multi-Modal Psychological & Cognitive Health Evaluation
 """
 
 from typing import List, Tuple
@@ -21,6 +22,7 @@ class SpaceClinicalEngine:
         e = record.environment
         c = record.cognitive
         m = record.musculoskeletal
+        p = record.psychological
 
         # 1. Cardiovascular y Estrés Autónomo (HRV)
         if v.hrv_rmssd_ms < 20:
@@ -50,7 +52,19 @@ class SpaceClinicalEngine:
             score += 2
             risks.append("Indicador de distrés psicológico agudo por biomarcador vocal")
 
-        # 3. Musculoesquelético & Desacondicionamiento
+        # 3. Salud Mental, Afecto y Privación Sensorial
+        if p:
+            if p.mood_valence < -0.4:
+                score += 2
+                risks.append("Estado afectivo decaído o desánimo sostenido (Valencia negativa < -0.4)")
+            if p.voice_acoustic_stress > 0.70:
+                score += 2
+                risks.append("Aplanamiento prosódico vocal / Distrés emocional")
+            if p.coherence_score_pct < 60.0:
+                score += 1
+                risks.append("Disincronía autonómica psicofisiológica (<60% coherencia)")
+
+        # 4. Musculoesquelético & Desacondicionamiento
         if m.muscle_mass_delta_pct < -5.0:
             score += 3
             risks.append(f"Atrofia muscular acelerada ({m.muscle_mass_delta_pct:.1f}% vs baseline)")
@@ -62,7 +76,7 @@ class SpaceClinicalEngine:
             score += 2
             risks.append("Incumplimiento crítico de protocolo de contramedidas ARED/Treadmill")
 
-        # 4. Ambiental y Radiación Espacial
+        # 5. Ambiental y Radiación Espacial
         if e.ambient_radiation_usv_h > 80.0:
             score += 4
             risks.append(f"Evento de Partículas Solares (SPE) o anomalía de radiación: {e.ambient_radiation_usv_h} uSv/h")
@@ -90,6 +104,7 @@ class SpaceClinicalEngine:
         Determina las contramedidas prescritas basadas en las directrices médicas de la NASA.
         """
         prescriptions: List[Countermeasure] = []
+        p = record.psychological
 
         # Contramedida para Radiación
         if record.environment.ambient_radiation_usv_h > 50.0:
@@ -119,6 +134,20 @@ class SpaceClinicalEngine:
                 )
             )
 
+        # Contramedida para Salud Mental / Privación Sensorial / Distrés Emocional
+        if record.vitals.hrv_rmssd_ms < 30.0 or record.cognitive.voice_stress_index > 0.70 or (p and p.mood_valence < -0.3):
+            prescriptions.append(
+                Countermeasure(
+                    id="CM-PSY-04",
+                    category="Salud Mental / Psicológica",
+                    title="Descompresión Psico-Respiratoria y Terapia Inmersiva Terrestre (Earth VR)",
+                    urgency="ALTA" if record.vitals.hrv_rmssd_ms < 22.0 else "MODERADA",
+                    description="Detección de sobrecarga emocional, tono simpático sostenido y privación sensorial.",
+                    action_protocol="1. Sesión de 3 min de Coherencia Cardíaca (0.1 Hz) guiada en el smartwatch.\n2. Inmersión de 15 min en visor VR simulando bosque templado terrestre con sonidos biofílicos.\n3. Priorización en cola DTN de paquete de audio familiar.",
+                    prescribed_dosage_duration="1 sesión previa al período de sueño durante 3 días consecutivos."
+                )
+            )
+
         # Contramedida para Desacondicionamiento Muscular
         if record.musculoskeletal.muscle_mass_delta_pct < -3.0 or record.musculoskeletal.daily_exercise_completed_pct < 70.0:
             prescriptions.append(
@@ -133,21 +162,7 @@ class SpaceClinicalEngine:
                 )
             )
 
-        # Contramedida para Estrés Autonómico / Salud Mental
-        if record.vitals.hrv_rmssd_ms < 30.0 or record.cognitive.voice_stress_index > 0.70:
-            prescriptions.append(
-                Countermeasure(
-                    id="CM-PSY-04",
-                    category="Salud Mental / Autonómica",
-                    title="Descompresión Psico-Respiratoria Biofeedback (CBT Offline)",
-                    urgency="MODERADA",
-                    description="Elevación sostenida de tono simpático y signos tempranos de agotamiento.",
-                    action_protocol="Sesión autónoma de coherencia cardíaca (respiración 0.1 Hz) con estimulación audiovisual inmersiva (módulo de naturaleza terrestre en VR).",
-                    prescribed_dosage_duration="20 minutos en módulo VR antes de la fase de reposo nocturno."
-                )
-            )
-
-        # Si todo está en orden, sugerir protocolo de mantenimiento preventivo
+        # Protocolo Nominal
         if not prescriptions:
             prescriptions.append(
                 Countermeasure(
@@ -155,8 +170,8 @@ class SpaceClinicalEngine:
                     category="Mantenimiento",
                     title="Protocolo Nominal de Vuelo Espacial",
                     urgency="PREVENTIVA",
-                    description="Todos los biomarcadores se encuentran dentro de las tolerancias fisiológicas.",
-                    action_protocol="Mantener rutina estándar de 2.5 horas de ejercicio resistivo y cardiovascular. Consumo hídrico regular.",
+                    description="Todos los biomarcadores fisiológicos y psicológicos se encuentran dentro de las tolerancias.",
+                    action_protocol="Mantener rutina estándar de 2.5 horas de ejercicio resistivo y cardiovascular. Check-in anímico regular.",
                     prescribed_dosage_duration="Ciclo continuo de misión."
                 )
             )
@@ -169,11 +184,11 @@ class SpaceClinicalEngine:
         countermeasures = cls.prescribe_countermeasures(record, risks)
 
         if status == "NOMINAL":
-            summary = "Estado fisiológico y cognitivo óptimo. No se requieren intervenciones clínicas extraordinarias."
+            summary = "Estado fisiológico, cognitivo y psicológico óptimo. No se requieren intervenciones clínicas extraordinarias."
         elif status == "ALERTA_MODERADA":
             summary = f"Detectados biomarcadores fuera de rango ({len(risks)} anomalías). Se requiere ejecución de contramedidas preventivas para evitar deterioro operacional."
         else:
-            summary = f"CONDICIÓN CRÍTICA. El astronauta presenta fallo multidimensional ({len(risks)} factores de riesgo). Intervención requerida y ajuste de actividades operacionales."
+            summary = f"CONDICIÓN CRÍTICA. El astronauta presenta descompensación multidimensional ({len(risks)} factores de riesgo). Intervención clínica y reajuste operacional inmediato."
 
         return HealthStatusReport(
             crew_member_id=record.crew_member_id,

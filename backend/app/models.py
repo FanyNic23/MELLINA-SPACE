@@ -31,6 +31,14 @@ class CognitiveMetrics(BaseModel):
     reported_sleep_hours: float = Field(..., description="Horas de sueño registradas en las últimas 24h")
 
 
+class PsychologicalMetrics(BaseModel):
+    mood_valence: float = Field(0.0, description="Valencia emocional (-1.0 negativo/triste a +1.0 positivo/motivado)")
+    mood_arousal: float = Field(0.0, description="Activación psicomotora (-1.0 letárgico a +1.0 agitado/ansioso)")
+    voice_acoustic_stress: float = Field(0.2, description="Biomarcador de aplanamiento o distrés vocal (0.0 a 1.0)")
+    coherence_score_pct: float = Field(85.0, description="Índice de coherencia cardíaca y biofeedback respiratorio (%)")
+    sensory_deprivation_risk: str = Field("BAJO", description="Nivel de privación sensorial: BAJO, MODERADO, SEVERO")
+
+
 class MusculoskeletalMetrics(BaseModel):
     muscle_mass_delta_pct: float = Field(..., description="Variación porcentual de masa muscular desde baseline misión")
     bone_mineral_density_est_t: float = Field(..., description="Estimación T-score densidad ósea")
@@ -43,12 +51,13 @@ class TelemetryRecord(BaseModel):
     vitals: VitalMetrics
     environment: EnvironmentalMetrics
     cognitive: CognitiveMetrics
+    psychological: Optional[PsychologicalMetrics] = None
     musculoskeletal: MusculoskeletalMetrics
 
 
 class Countermeasure(BaseModel):
     id: str
-    category: str  # "Cardiovascular", "Musculoesquelético", "Neurocognitivo", "Inmunológico/Radiación"
+    category: str  # "Cardiovascular", "Musculoesquelético", "Neurocognitivo", "Salud Mental / Psicológica", "Inmunológico/Radiación"
     title: str
     urgency: str   # "INMEDIATA", "ALTA", "MODERADA", "PREVENTIVA"
     description: str

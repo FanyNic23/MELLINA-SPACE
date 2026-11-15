@@ -1,6 +1,7 @@
 """
 Synthetic Telemetry Generator for Deep Space Mission Simulator
 Generates a realistic 30-day timeline for 4 crew members aboard a Mars Transit Vehicle.
+Includes Physical, Cognitive, Environmental, and Psychological Data.
 """
 
 import json
@@ -17,7 +18,11 @@ CREW_PROFILES = [
         "base_hr": 64,
         "base_hrv": 55,
         "base_rt": 235,
-        "muscle_loss": -1.1
+        "muscle_loss": -1.1,
+        "base_valence": 0.6,
+        "base_arousal": 0.2,
+        "base_coherence": 92.0,
+        "sensory_risk": "BAJO"
     },
     {
         "id": "ASTRO-02",
@@ -27,7 +32,11 @@ CREW_PROFILES = [
         "base_hr": 78,
         "base_hrv": 32,
         "base_rt": 260,
-        "muscle_loss": -6.2  # Severe atrophy
+        "muscle_loss": -6.2,
+        "base_valence": -0.2,
+        "base_arousal": 0.5,
+        "base_coherence": 68.0,
+        "sensory_risk": "MODERADO"
     },
     {
         "id": "ASTRO-03",
@@ -35,9 +44,13 @@ CREW_PROFILES = [
         "role": "Oficial Científico",
         "archetype": "cognitive_fatigue",
         "base_hr": 72,
-        "base_hrv": 24,  # Autonomic stress
-        "base_rt": 375,  # High reaction time
-        "muscle_loss": -2.0
+        "base_hrv": 24,
+        "base_rt": 375,
+        "muscle_loss": -2.0,
+        "base_valence": -0.7,
+        "base_arousal": -0.4,
+        "base_coherence": 45.0,
+        "sensory_risk": "SEVERO"
     },
     {
         "id": "ASTRO-04",
@@ -47,7 +60,11 @@ CREW_PROFILES = [
         "base_hr": 84,
         "base_hrv": 38,
         "base_rt": 250,
-        "muscle_loss": -1.8
+        "muscle_loss": -1.8,
+        "base_valence": -0.1,
+        "base_arousal": 0.3,
+        "base_coherence": 72.0,
+        "sensory_risk": "MODERADO"
     }
 ]
 
@@ -59,7 +76,6 @@ def generate_mission_dataset(days: int = 14):
         day_time = start_time + timedelta(days=day)
 
         for crew in CREW_PROFILES:
-            # Variaciones estocásticas
             hr = crew["base_hr"] + random.gauss(0, 3)
             hrv = max(15, crew["base_hrv"] + random.gauss(0, 4))
             rt = max(180, crew["base_rt"] + random.gauss(0, 15))
@@ -69,8 +85,10 @@ def generate_mission_dataset(days: int = 14):
             radiation = 24.0 + random.uniform(-2, 3)
             exercise_pct = 95.0 + random.uniform(-5, 5)
             muscle_delta = crew["muscle_loss"] + (day * -0.05)
+            valence = crew["base_valence"] + random.uniform(-0.05, 0.05)
+            coherence = crew["base_coherence"] + random.uniform(-3, 3)
+            sensory = crew["sensory_risk"]
 
-            # Inyectar anomalías según el arquetipo
             if crew["archetype"] == "musculoskeletal_atrophy":
                 exercise_pct = max(30.0, 55.0 - (day * 1.5))
                 muscle_delta = -4.5 - (day * 0.25)
@@ -80,8 +98,10 @@ def generate_mission_dataset(days: int = 14):
                 lapses = random.randint(2, 4)
                 voice_stress = 0.78 + random.uniform(0, 0.12)
                 hrv = 18.0 + random.uniform(0, 4)
+                valence = -0.75 + random.uniform(-0.1, 0.05)
+                coherence = 42.0 + random.uniform(-4, 4)
             elif crew["archetype"] == "radiation_event" and day >= 10:
-                radiation = 88.5 + random.uniform(-4, 12)  # Solar Particle Event spike
+                radiation = 88.5 + random.uniform(-4, 12)
 
             record = {
                 "timestamp": day_time.isoformat(),
@@ -105,7 +125,11 @@ def generate_mission_dataset(days: int = 14):
                 "sleep_hours": round(sleep, 1),
                 "muscle_delta_pct": round(muscle_delta, 2),
                 "bmd_t_score": round(-0.4 - (day * 0.02), 2),
-                "exercise_pct": round(exercise_pct, 1)
+                "exercise_pct": round(exercise_pct, 1),
+                "mood_valence": round(valence, 2),
+                "mood_arousal": round(crew["base_arousal"], 2),
+                "coherence_pct": round(coherence, 1),
+                "sensory_risk": sensory
             }
             dataset.append(record)
 
