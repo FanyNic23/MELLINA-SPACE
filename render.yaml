@@ -1,0 +1,15 @@
+# Render Blueprint · demo pública de A-HAMS (plan gratuito: 512 MB, 0.1 CPU; imagen del Dockerfile).
+services:
+  - type: web
+    name: ahams
+    runtime: docker
+    plan: free
+    branch: dev
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: WHISPER_CPU_THREADS   # con 0.1 CPU, un hilo y beam 1 transcriben ~4 veces más rápido
+        value: "1"
+      - key: WHISPER_BEAM_SIZE
+        value: "1"

@@ -199,14 +199,12 @@ docker run --rm -p 8000:8000 -v ahams-runtime:/app/backend/runtime ahams
 
 La imagen incluye la interfaz compilada y el modelo Whisper; en ejecución no descarga nada. El volumen conserva chequeos, rutina y entorno entre reinicios.
 
-### Demo pública en Hugging Face Spaces
+### Demo pública en Render (gratis)
 
-```bash
-venv/bin/hf auth login   # una vez, con un token de escritura de huggingface.co/settings/tokens
-make deploy              # publica el último commit en https://<usuario>-ahams.hf.space
-```
+El repositorio incluye `render.yaml`: en [render.com](https://render.com) → **New → Blueprint** → este repositorio (rama `dev`). Render construye la imagen del `Dockerfile` y la publica con HTTPS; cada `git push` a `dev` la vuelve a desplegar.
 
-Hugging Face construye la imagen con el `Dockerfile` (plan gratuito, CPU). Los datos de la demo se reinician cuando el Space se reinicia.
+* Plan gratuito: 512 MB y 0.1 CPU. Por eso la imagen usa Whisper `tiny` (unos 13 s por orden de voz) y el servicio se duerme tras 15 min sin visitas (despierta en ~1 min).
+* Los datos de la demo (chequeos, rutina, simulación) se reinician cuando el servicio se reinicia.
 
 ### Opción 3: Paso a paso
 

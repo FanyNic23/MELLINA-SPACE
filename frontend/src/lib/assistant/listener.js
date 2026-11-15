@@ -36,7 +36,7 @@ export class VoiceListener {
     this.engine = null;
     if (canRecord) {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 1500);
+      const timer = setTimeout(() => ctrl.abort(), 5000);
       try {
         const res = await fetch(STT_CONFIG.statusEndpoint, { signal: ctrl.signal });
         const { stt } = await res.json();

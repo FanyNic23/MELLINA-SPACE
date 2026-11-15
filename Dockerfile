@@ -20,13 +20,16 @@ COPY data/ data/
 COPY --from=web /web/dist frontend/dist
 
 # El modelo de voz queda dentro de la imagen; en vuelo no se descarga nada.
-ARG WHISPER_MODEL=small
+# `tiny` responde en segundos con poca CPU (plan gratuito de Render). En un servidor con más CPU, `small`
+# entiende mejor:  docker build --build-arg WHISPER_MODEL=small .
+ARG WHISPER_MODEL=tiny
+ENV WHISPER_MODEL=${WHISPER_MODEL}
 RUN python backend/scripts/download_whisper_model.py ${WHISPER_MODEL}
 
-# Usuario sin privilegios (Hugging Face Spaces ejecuta con UID 1000).
+# Usuario sin privilegios.
 RUN useradd -m -u 1000 ahams && mkdir -p backend/runtime && chown -R ahams /app/backend/runtime /app/backend/models
 USER ahams
 
+# Puerto: el que asigne la plataforma (PORT, p. ej. Render) o 8000.
 EXPOSE 8000
-VOLUME ["/app/backend/runtime"]
-CMD ["python", "backend/run.py"]
+CMD ["sh", "-c", "SERVER_PORT=${PORT:-8000} exec python backend/run.py"]

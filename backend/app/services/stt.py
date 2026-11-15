@@ -99,7 +99,7 @@ class LocalWhisper:
                     self._model = WhisperModel(
                         self.s.whisper_model, device=self.s.whisper_device,
                         compute_type=self.s.whisper_compute_type, download_root=self.s.whisper_model_dir,
-                        local_files_only=local_only)
+                        cpu_threads=self.s.whisper_cpu_threads, local_files_only=local_only)
                     self.last_error = None
                 except Exception as exc:
                     self.last_error = str(exc)
@@ -119,7 +119,7 @@ class LocalWhisper:
         model = self._load(not self.s.whisper_allow_download)
         started = time.perf_counter()
         segments, info = model.transcribe(
-            decode_audio(audio), language=language, beam_size=5, vad_filter=True,
+            decode_audio(audio), language=language, beam_size=self.s.whisper_beam_size, vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 400},
             initial_prompt=MISSION_PROMPTS.get(language), condition_on_previous_text=False)
         text = " ".join(seg.text.strip() for seg in segments).strip()

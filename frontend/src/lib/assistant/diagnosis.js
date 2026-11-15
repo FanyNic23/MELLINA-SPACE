@@ -8,7 +8,7 @@ const API_BASE = ''; // mismo origen: el Edge Core sirve esta app
 const ASSISTANT_NAME = 'Mellina';
 let lang = 'en';
 
-async function getJSON(path, timeoutMs = 1500) {
+async function getJSON(path, timeoutMs = 5000) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {

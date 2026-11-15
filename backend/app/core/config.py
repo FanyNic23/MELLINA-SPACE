@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     whisper_model_dir: str = "models/whisper"
     whisper_device: str = "cpu"
     whisper_compute_type: str = "int8"
+    # Servidores con poca CPU (p. ej. plan gratuito de Render): 1 hilo y beam 1 transcriben mucho más rápido.
+    whisper_cpu_threads: int = 0       # 0 = automático
+    whisper_beam_size: int = 5
     # False = nunca descargar (operación estrictamente offline). El modelo se instala una sola vez
     # con scripts/download_whisper_model.py antes de la misión.
     whisper_allow_download: bool = False
