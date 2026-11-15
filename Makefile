@@ -4,7 +4,7 @@ VENV    := venv
 VPY     := $(VENV)/bin/python
 WHISPER ?= small
 
-.PHONY: setup backend frontend whisper run dev test lint clean
+.PHONY: setup backend frontend whisper run dev test lint deploy clean
 
 ## Instala todo lo necesario antes de la misión (requiere internet una sola vez)
 setup: backend frontend whisper
@@ -34,6 +34,10 @@ test:
 
 lint:
 	cd frontend && npm run lint && npm run typecheck
+
+## Publica el último commit como demo en Hugging Face Spaces (requiere: $(VENV)/bin/hf auth login)
+deploy:
+	$(VPY) deploy/hf_space.py $(SPACE)
 
 clean:
 	rm -rf frontend/dist frontend/node_modules

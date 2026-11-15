@@ -23,6 +23,10 @@ COPY --from=web /web/dist frontend/dist
 ARG WHISPER_MODEL=small
 RUN python backend/scripts/download_whisper_model.py ${WHISPER_MODEL}
 
+# Usuario sin privilegios (Hugging Face Spaces ejecuta con UID 1000).
+RUN useradd -m -u 1000 ahams && mkdir -p backend/runtime && chown -R ahams /app/backend/runtime /app/backend/models
+USER ahams
+
 EXPOSE 8000
 VOLUME ["/app/backend/runtime"]
 CMD ["python", "backend/run.py"]
