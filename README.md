@@ -4,7 +4,8 @@
 [![NASA Space Apps Challenge](https://img.shields.io/badge/NASA%20Space%20Apps-Challenge-0B3D91?style=for-the-badge&logo=nasa&logoColor=white)](https://www.spaceappschallenge.org/)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Edge Computing](https://img.shields.io/badge/Architecture-100%25%20Offline%20Edge-10b981?style=for-the-badge)](https://en.wikipedia.org/wiki/Edge_computing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -128,114 +129,103 @@ flowchart TD
 ## 📂 4. Estructura del Repositorio
 
 ```text
-desafio_nasa/
-│
-├── .gitignore                         # Exclusiones estándar (Python, venv, cache, IDEs)
-├── README.md                          # Documentación completa del proyecto
-│
+MELLINA-SPACE/
+├── Makefile                           # setup · run · dev · test · lint
+├── Dockerfile                         # Imagen autocontenida (interfaz + Edge Core + Whisper)
 ├── data/
-│   └── crew_telemetry_sample.json     # Dataset sintético de 4 perfiles y 14 días de misión
+│   └── crew_telemetry_sample.json     # Dataset sintético de 5 tripulantes por días de misión
 │
-├── backend/
+├── backend/                           # Edge Core · FastAPI + SQLite, sin servicios en la nube
 │   ├── .env.example                   # Configuración documentada (copiar a backend/.env)
-│   ├── requirements.txt               # Dependencias del Edge Core
-│   ├── run.py                         # Arranque con la configuración de backend/.env
+│   ├── requirements.txt
+│   ├── run.py                         # Arranque: API + interfaz compilada en un solo puerto
 │   ├── app/
-│   │   ├── main.py                    # API única: telemetría en tiempo real + SEWS + voz
-│   │   ├── core/                      # Configuración, base de datos y tripulación (crew.py)
-│   │   ├── models/                    # Tablas: observaciones FHIR, alertas, cola Tierra-Espacio
-│   │   ├── schemas/                   # FHIR Observation, API y modelos clínicos SEWS
-│   │   ├── routers/                   # /api/* (SEWS, enlace, PVT), /api/sim (panel de simulación) y voz (Whisper local)
+│   │   ├── main.py                    # Ciclo de vida, routers y servido de frontend/dist
+│   │   ├── core/                      # Configuración, base de datos, tripulación y entornos de misión
+│   │   ├── routers/                   # clinical · simulation · checkin · routine · mission · voice
 │   │   └── services/
-│   │       ├── rule_engine.py         # Motor de reglas: umbrales + línea base adaptativa + proyección
-│   │       ├── telemetry_service.py   # Ingesta FHIR -> reglas -> alertas -> copiloto -> WebSocket
-│   │       ├── ai_copilot.py          # Copiloto de alertas con reglas deterministas (local)
-│   │       ├── simulator.py           # Simulador de crisis: tormenta solar, insomnio, EVA
+│   │       ├── clinical_engine.py     # SEWS explicable (desglose por factor) y contramedidas
+│   │       ├── forecast.py            # Gemelo digital: proyección a 30 días con y sin contramedidas
+│   │       ├── sews_dataset.py        # Datos de misión, chequeos diarios y panel de simulación
+│   │       ├── routine.py             # Rutina diaria, puntos, racha e insignias
 │   │       ├── sync_queue.py          # Store-and-forward Tierra-Espacio (AOS / LOS)
 │   │       ├── stt.py                 # Reconocimiento de voz con Whisper local
-│   │       ├── clinical_engine.py     # Motor de cálculo SEWS y prescripción médica
-│   │       ├── sews_dataset.py        # Datos de misión + valores del panel de simulación
-│   │       └── data_adapter.py        # ⭐ Adaptador universal para los datasets de la NASA
-│   ├── scripts/
-│   │   ├── generate_synthetic_data.py # Generador de datos sintéticos con anomalías clínicas
-│   │   └── download_whisper_model.py  # Descarga única del modelo de voz local
-│   └── tests/
-│       └── smoke_test.py              # Prueba de extremo a extremo (100% local)
+│   │       ├── ai_copilot.py          # Copiloto de alertas con reglas deterministas
+│   │       └── data_adapter.py        # Adaptador para los datasets de la NASA
+│   ├── scripts/                       # Datos sintéticos y descarga única del modelo de voz
+│   └── tests/smoke_test.py            # Prueba de extremo a extremo (100% local)
 │
-└── frontend/
-    ├── index.html                     # Dashboard HUD de la Estación (Gráficas, Telemetría, Prescripción)
-    ├── smartwatch.html                # ⌚ Reloj del tripulante: 5 carátulas (vitales, contramedida, mente, PVT y asistente Mellina con voz)
-    └── assistant/                     # Avatar 3D, voz, micrófono y diagnóstico hablado
+└── frontend/                          # Interfaz · React 19 + TypeScript + Vite + Tailwind v4
+    ├── public/                        # Anatomía 3D (BodyParts3D), fotos de la tripulación, marca
+    ├── tools/build-anatomy.mjs        # Genera public/anatomy a partir de BodyParts3D
+    └── src/
+        ├── api/                       # Cliente tipado del Edge Core
+        ├── state/                     # Misión, cuerpo 3D y avisos (React context)
+        ├── components/                # Dashboard, pestañas, chequeo diario y reloj (watch/)
+        └── lib/                       # Cuerpo 3D, pulso por cámara (rPPG), asistente Mellina
 ```
 
----
-
-## 🚀 5. Inicio Rápido (Quick Start)
-
-### Opción 1: Visualización Inmediata (Sin instalar dependencias)
-El frontend incluye modo autónomo con datos de telemetría precargados:
-1. Clona o descarga el repositorio:
-   ```bash
-   git clone https://github.com/FanyNic23/MELLINA-SPACE.git
-   cd MELLINA-SPACE
-   ```
-2. **Abrir cualquiera de las dos interfaces:**
-   * **Dashboard Hábitat (`frontend/index.html`):** Vista de estación médica para monitoreo de la tripulación completa.
-   * **Smartwatch Astronauta (`frontend/smartwatch.html`):** Vista táctil de muñeca para el astronauta en movimiento: gestos de deslizamiento, alertas acústicas Web Audio, conmutador circular/cuadrado y el asistente de voz Mellina (holograma 3D) como quinta carátula.
+La interfaz es una sola aplicación con dos vistas: el **dashboard del hábitat** (`/#/`) y el **reloj del tripulante** (`/#/reloj?crew=ASTRO-03`).
 
 ---
 
-### Opción 2: Ejecución Full-Stack con Backend Edge (FastAPI)
+## 🚀 5. Inicio Rápido
 
-1. **Crear y activar un entorno virtual (recomendado):**
-   ```bash
-   # En Windows PowerShell:
-   python -m venv venv
-   .\venv\Scripts\Activate.ps1
-   ```
+Requisitos: **Python 3.12** y **Node 22** (solo para compilar la interfaz). Internet se necesita una única vez, para instalar dependencias y el modelo de voz; después todo funciona desconectado.
 
-2. **Instalar dependencias y crear la configuración local:**
-   ```bash
-   pip install -r backend/requirements.txt
-   cp backend/.env.example backend/.env
-   ```
-   Toda la configuración (host, puerto, CORS, ruta de datos y Whisper) vive en `backend/.env`, que no se versiona. La plantilla comentada es `backend/.env.example`.
+### Opción 1: Make
 
-   **Reconocimiento de voz local para el asistente del reloj:** instala una sola vez, antes de la misión, el modelo Whisper (~460 MB, queda en `backend/models/`, fuera de git). Después el micrófono funciona sin internet:
-   ```bash
-   python backend/scripts/download_whisper_model.py
-   ```
-   Ajustes en `backend/.env`: `WHISPER_MODEL` (`base` es más rápido, `small` por defecto entiende mejor), `WHISPER_DEVICE=mps` (GPU de Apple Silicon, experimental) y `WHISPER_ALLOW_DOWNLOAD=false` (valor por defecto) para que el sistema nunca intente descargar nada.
+```bash
+git clone https://github.com/FanyNic23/MELLINA-SPACE.git
+cd MELLINA-SPACE
+make setup   # venv + dependencias + compila la interfaz + modelo Whisper
+make run     # http://127.0.0.1:8000
+```
 
-3. **(Opcional) Generar telemetría sintética:**
-   ```bash
-   python backend/scripts/generate_synthetic_data.py
-   ```
+| Comando | Qué hace |
+|---|---|
+| `make run` | Edge Core en `http://127.0.0.1:8000` sirviendo API e interfaz |
+| `make dev` | Backend con recarga + Vite en `http://localhost:5173` (proxy a la API) |
+| `make test` | Prueba de extremo a extremo del backend |
+| `make lint` | oxlint + comprobación de tipos de la interfaz |
+| `make whisper WHISPER=base` | Instala otro tamaño del modelo de voz |
 
-4. **Iniciar el servidor local Edge de la nave:**
-   ```bash
-   python backend/run.py
-   ```
-   * Usa `SERVER_HOST`, `SERVER_PORT` y `SERVER_RELOAD` de `backend/.env`. Si cambias el host o el puerto, actualiza también `frontend/assistant/config.js`.
-   * El servidor iniciará en: `http://127.0.0.1:8000`
-   * Documentación interactiva de la API (Swagger UI): `http://127.0.0.1:8000/docs`
-   * **100% offline:** el sistema no usa ninguna API ni servicio en la nube. Todo corre en el hábitat:
+### Opción 2: Docker
 
-     | Función | Cómo funciona |
-     |---|---|
-     | Evaluación clínica | Motor SEWS y reglas deterministas en el Edge Core |
-     | Asistente Mellina | Respuestas generadas con los datos del motor clínico |
-     | Escuchar | Whisper local (faster-whisper) |
-     | Hablar | Voces instaladas en el sistema operativo |
-     | Interfaz | Tailwind, Chart.js, Three.js, iconos y modelo 3D guardados en `frontend/` |
-     | Enlace con Tierra | Cola store-and-forward local con estación en Tierra simulada |
+```bash
+docker build -t ahams .
+docker run --rm -p 8000:8000 -v ahams-runtime:/app/backend/runtime ahams
+```
 
-   * **Panel de simulación** (pestaña *Simular* del dashboard, o `POST /api/sim/{id}`): introduce datos simulados (radiación, CO₂, SpO₂, pulso, HRV, sueño, reflejos, estrés vocal, coherencia, masa muscular, ejercicio) o lanza una crisis predefinida (tormenta solar, fuga de CO₂, fatiga extrema, aislamiento, atrofia). El motor clínico reevalúa al instante y todo se actualiza: SEWS, cuerpo 3D, amenazas, diagnóstico y reloj. *Datos reales* vuelve a los datos de misión.
-   * Simulador de crisis: `POST /simulator/start` y luego `POST /simulator/scenarios/spe` (o `insomnia`, `eva`). El asistente del reloj anuncia las alertas en tiempo real.
-   * Prueba de extremo a extremo: `cd backend && python -m tests.smoke_test`
+La imagen incluye la interfaz compilada y el modelo Whisper; en ejecución no descarga nada. El volumen conserva chequeos, rutina y entorno entre reinicios.
 
-5. **Abrir el Frontend:**
-   * Abre `frontend/index.html` en tu navegador.
+### Opción 3: Paso a paso
+
+```bash
+python -m venv venv
+source venv/bin/activate              # Windows: .\venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env
+python backend/scripts/download_whisper_model.py
+cd frontend && npm ci && npm run build && cd ..
+python backend/run.py
+```
+
+* Dashboard: `http://127.0.0.1:8000` · Reloj: `http://127.0.0.1:8000/#/reloj` · API: `http://127.0.0.1:8000/docs`
+* Toda la configuración (host, puerto, rutas de datos y Whisper) vive en `backend/.env`. `WHISPER_MODEL=base` es más rápido; `small` (por defecto) entiende mejor.
+* **100% offline:** el sistema no usa ninguna API ni servicio en la nube. Todo corre en el hábitat:
+
+  | Función | Cómo funciona |
+  |---|---|
+  | Evaluación clínica | Motor SEWS y reglas deterministas en el Edge Core |
+  | Asistente Mellina | Respuestas generadas con los datos del motor clínico |
+  | Escuchar | Whisper local (faster-whisper) |
+  | Hablar | Voces instaladas en el sistema operativo |
+  | Pulso por cámara | rPPG calculado en el navegador; el video nunca sale del dispositivo |
+  | Interfaz | React compilada y servida por el mismo Edge Core, con fuentes, iconos y modelo 3D locales |
+  | Enlace con Tierra | Cola store-and-forward local con estación en Tierra simulada |
+
+* **Panel de simulación** (pestaña *Simular* o `POST /api/sim/{id}`): crisis predefinidas (tormenta solar, CO₂, fatiga, aislamiento, atrofia) y ajuste manual de cada indicador; el motor clínico reevalúa al instante.
 
 ---
 
@@ -255,9 +245,9 @@ El sistema incluye 5 tripulantes con escenarios clínicos basados en la literatu
 
 ## 🔌 7. ¿Cómo conectar los datos oficiales de la NASA el día del Hackatón?
 
-Gracias al **Patrón de Diseño Adapter** implementado en [`backend/app/data_adapter.py`](backend/app/data_adapter.py), conectar los datasets que entregue la NASA el día del hackatón toma **menos de 2 minutos**:
+Gracias al **Patrón de Diseño Adapter** implementado en [`backend/app/services/data_adapter.py`](backend/app/services/data_adapter.py), conectar los datasets que entregue la NASA el día del hackatón toma **menos de 2 minutos**:
 
-1. Abre `backend/app/data_adapter.py`.
+1. Abre `backend/app/services/data_adapter.py`.
 2. Modifica únicamente los nombres de los campos en el método `from_hackathon_raw_dict`:
    ```python
    # Mapeo según las columnas del archivo entregado por la NASA:

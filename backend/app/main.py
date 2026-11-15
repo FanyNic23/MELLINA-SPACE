@@ -8,12 +8,14 @@ Ejecutar:  python backend/run.py      ->  http://127.0.0.1:8000/docs
 """
 import asyncio
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -308,3 +310,11 @@ async def set_link(body: LinkRequest, request: Request):
          summary="Métricas de la cola: pendientes, sincronizados, latencia, último drenado")
 async def sync_status(request: Request):
     return await request.app.state.sync.status()
+
+
+# =================================================================== interfaz (React, compilada)
+# La interfaz de frontend/ compilada (npm run build) se sirve desde el mismo Edge Core: un solo origen,
+# sin internet. Se monta al final para que todas las rutas de la API tengan prioridad.
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+if FRONTEND_DIST.is_dir():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")

@@ -1,6 +1,6 @@
 """API clínica SEWS (Space Early Warning Score) por días de misión.
 
-La consumen el dashboard (frontend/index.html) y el asistente Mellina dentro del reloj (frontend/smartwatch.html).
+La consumen el dashboard y el reloj del tripulante (frontend/, React) y el asistente Mellina.
 """
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel

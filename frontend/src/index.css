@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+/*
+ * A-HAMS · Sistema visual.
+ * Plano: sin degradados, sin bordes y sin puntos como indicadores. Profundidad con sombra y brillo.
+ * Niveles: nominal turquesa · vigilar celeste · crítico rojo (parpadea).
+ */
+@theme {
+  --color-space-950: #030405;
+  --color-space-900: #0a0e13;
+  --color-space-800: #0b0f14;
+  --color-space-700: #121820;
+  --color-space-600: #18202a;
+  --color-accent: #22d3ee;
+  --color-nominal: #2dd4bf;
+  --color-watch: #38bdf8;
+  --color-critical: #ef4444;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body { background: var(--color-space-950); color: #f1f5f9; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  ::selection { background: var(--color-accent); color: #000; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--color-space-600); border-radius: 4px; }
+  button { cursor: pointer; }
+}
+
+@layer components {
+  .card { background: var(--color-space-900); border-radius: 0.75rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+  .panel-title { font: 600 10px/1 var(--font-mono); letter-spacing: 0.16em; color: #64748b; text-transform: uppercase; }
+}
+
+@keyframes alarm-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.is-critical { animation: alarm-blink 0.9s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+}
+
+@keyframes link { to { left: 100%; } }
+@keyframes cta-due { 50% { box-shadow: 0 0 0 6px rgba(34, 211, 238, 0.25), 0 10px 34px rgba(34, 211, 238, 0.55); } }
+
+/* Peligro: la foto del tripulante crítico pulsa en rojo (sube y baja la exposición) */
+@keyframes danger-tint { 0%, 100% { opacity: 0.18; } 50% { opacity: 0.62; } }
+@keyframes danger-exposure { 0%, 100% { filter: brightness(0.82) contrast(1.05); } 50% { filter: brightness(1.18) saturate(1.2) contrast(1.1); } }
+@keyframes danger-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), 0 0 18px rgba(239, 68, 68, 0.15); }
+  50% { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.9), 0 0 38px rgba(239, 68, 68, 0.45); }
+}
+@keyframes hero-in { from { opacity: 0; transform: scale(1.04); } }
+.danger-photo { position: relative; }
+.danger-photo::after { content: ''; position: absolute; inset: 0; background: #ef4444; mix-blend-mode: color; opacity: 0; pointer-events: none; }
+.is-danger .danger-photo::after { animation: danger-tint 2.2s ease-in-out infinite; }
+.is-danger .danger-photo img { animation: danger-exposure 2.2s ease-in-out infinite; }
+.is-danger { animation: danger-glow 2.2s ease-in-out infinite; }
+
+.fc-range { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 4px; background: var(--color-space-600); outline: none; }
+.fc-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 5px; background: #22d3ee; box-shadow: 0 0 12px #22d3ee; cursor: pointer; }
+
+/* Barras segmentadas (sin degradados) */
+.seg-bar { display: flex; gap: 3px; height: 12px; }
+.seg-bar i { flex: 1; background: var(--color-space-600); border-radius: 1px; }
+.seg-bar i.on { background: var(--c); box-shadow: 0 0 6px var(--c); animation: seg-in 0.35s ease both; animation-delay: calc(var(--k) * 22ms); }
+.seg-bar i.on.tip { animation: seg-in 0.35s ease both, seg-tip 1.4s ease-in-out infinite; animation-delay: calc(var(--k) * 22ms), 0.8s; }
+.seg-slant { padding: 0 3px; }
+.seg-slant i { transform: skewX(-28deg); }
+.is-critical-bar i.on { animation: alarm-blink 0.9s ease-in-out infinite !important; }
+@keyframes seg-in { from { opacity: 0.1; } }
+@keyframes seg-tip { 50% { opacity: 0.45; } }
+@keyframes dock-float { 50% { transform: translateY(-4px); } }
+@keyframes surgeon-alarm { 50% { background: rgba(239, 68, 68, 0.28); } }

@@ -1,0 +1,52 @@
+/* A-HAMS · Reloj del tripulante: dispositivo, carátulas y asistente. Plano: sin bordes, degradados ni puntos. */
+.watch { --size: min(78vw, 58vh, 480px); position: relative; width: var(--size); height: var(--size); }
+.watch-band { position: absolute; left: 50%; width: 46%; height: 22%; transform: translateX(-50%); background: #10151b; }
+.watch-band.top { top: -17%; border-radius: 18px 18px 6px 6px; }
+.watch-band.bottom { bottom: -17%; border-radius: 6px 6px 18px 18px; }
+.watch-case { position: absolute; inset: 0; padding: 4.5%; background: #121820; border-radius: 50%;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7), 0 0 60px rgba(34, 211, 238, 0.08); transition: border-radius 0.35s; }
+.watch-crown { position: absolute; right: -3.2%; top: 42%; width: 4.5%; height: 16%; border-radius: 4px; background: #18202a; }
+.watch-screen { position: relative; width: 100%; height: 100%; background: #000; border-radius: 50%; overflow: hidden;
+      display: flex; flex-direction: column; cursor: grab; transition: border-radius 0.35s; touch-action: pan-y; }
+.watch.is-square .watch-case { border-radius: 26%; }
+.watch.is-square .watch-screen { border-radius: 22%; }
+.drag-active { cursor: grabbing !important; }
+.carousel-track { display: flex; width: 500%; height: 100%; will-change: transform; }
+.carousel-panel { position: relative; width: 20%; height: 100%; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 0 calc(var(--size) * 0.14); } /* % aquí sería del carrusel completo */
+.w-tile { background: #0b0f14; border-radius: 10px; }
+.w-label { font: 600 8px/1 ui-monospace, monospace; letter-spacing: 0.14em; color: #64748b; }
+@keyframes breathe-orb {
+      0%, 100% { transform: scale(0.72); box-shadow: 0 0 14px rgba(34, 211, 238, 0.25); }
+      40%, 50% { transform: scale(1.12); box-shadow: 0 0 34px rgba(34, 211, 238, 0.6); }
+    }
+.orb-breathing { animation: breathe-orb 10s infinite ease-in-out; }
+.watch-toast { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.92);
+      opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 30; }
+.watch-toast.is-on { opacity: 1; }
+.face-btn { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px 12px; border-radius: 10px;
+      background: #0b0f14; transition: background 0.2s; }
+.face-btn:hover { background: #121820; }
+.face-btn.is-active { background: rgba(34, 211, 238, 0.12); box-shadow: 0 8px 24px rgba(34, 211, 238, 0.1); }
+.face-btn .face-icon { width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none;
+      background: #121820; color: #22d3ee; font-size: 16px; }
+.face-btn.is-active .face-icon { background: #22d3ee; color: #000; }
+.assist-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.assist-caption { position: absolute; left: 14%; right: 14%; bottom: 24%; text-align: center; font-size: 11px; line-height: 1.35;
+      color: #e2e8f0; text-shadow: 0 1px 6px #000; pointer-events: none; min-height: 1.35em; }
+.assist-mic { position: absolute; left: 50%; bottom: 4%; transform: translateX(-50%); width: 40px; height: 40px; border-radius: 50%;
+      display: grid; place-items: center; font-size: 18px; background: #22d3ee; color: #000; box-shadow: 0 0 18px rgba(34, 211, 238, 0.45);
+      transition: background 0.2s, box-shadow 0.2s; }
+.assist-mic:disabled { background: #18202a; color: #64748b; box-shadow: none; }
+.assist-mic.listening { background: #f8fafc; animation: mic-pulse 1.1s ease-in-out infinite; }
+.assist-mic.speaking { box-shadow: 0 0 28px rgba(34, 211, 238, 0.8); }
+@keyframes mic-pulse { 50% { box-shadow: 0 0 0 10px rgba(248, 250, 252, 0.12), 0 0 26px rgba(248, 250, 252, 0.5); } }
+.assist-log p { font-size: 12px; line-height: 1.45; color: #cbd5e1; padding: 8px 10px; border-radius: 10px; background: #0b0f14; }
+.assist-log p.user { background: rgba(34, 211, 238, 0.08); }
+.assist-log b { display: block; font: 700 9px ui-monospace, monospace; letter-spacing: 0.14em; color: #22d3ee; margin-bottom: 2px; }
+.assist-log p.user b { color: #94a3b8; }
+.query-btn { padding: 9px 10px; border-radius: 10px; background: #0b0f14; font-size: 12px; font-weight: 600; color: #e2e8f0;
+      display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+.query-btn:hover { background: rgba(34, 211, 238, 0.12); }
+.query-btn svg { color: #22d3ee; }
+@media (prefers-reduced-motion: reduce) { .orb-breathing, .assist-mic.listening { animation: none; } }
