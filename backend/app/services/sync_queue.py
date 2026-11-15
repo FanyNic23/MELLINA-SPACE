@@ -1,8 +1,9 @@
 """Store-and-forward Tierra-Espacio.
 
-Todo paquete (bundle FHIR, alerta, consejo del copiloto, log de voz) se persiste primero en PostgreSQL.
-Con enlace LOS no se transmite nada; con AOS un worker vacía la cola por prioridad (0 = crítica) y
-antigüedad, hacia la "Estación en Tierra" (SQS + S3 si hay credenciales; si no, un sumidero simulado).
+Todo paquete (bundle FHIR, alerta, consejo del copiloto, log de voz, test PVT) se persiste primero en la
+base local. Con enlace LOS no se transmite nada; con AOS un worker vacía la cola por prioridad (0 = crítica)
+y antigüedad, hacia la "Estación en Tierra" (SQS + S3 si hay credenciales; si no, un sumidero simulado).
+Un paquete entregado se borra del buffer: la tabla sólo contiene lo pendiente o fallido y no crece sin límite.
 """
 import asyncio
 import json
@@ -13,7 +14,7 @@ from collections import deque
 from enum import IntEnum, StrEnum
 from typing import Optional, Protocol
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.core.db import as_utc, utcnow
 from app.models.telemetry import SyncPacketRow
@@ -128,6 +129,12 @@ class SyncQueue:
         log.info("Enlace %s -> %s", prev, state)
         return {"link": state.value, "changed": True, "previous": prev.value, "last_los": self.last_los}
 
+    async def pending(self) -> int:
+        """Paquetes aún no entregados (consulta liviana sobre el índice de la cola)."""
+        async with self.sf() as s:
+            return await s.scalar(select(func.count()).select_from(SyncPacketRow)
+                                  .where(SyncPacketRow.status == "pending")) or 0
+
     async def status(self) -> dict:
         async with self.sf() as s:
             rows = (await s.execute(select(SyncPacketRow.status, SyncPacketRow.priority, func.count())
@@ -192,9 +199,9 @@ class SyncQueue:
                     continue
                 now = utcnow()
                 for r in rows:
-                    r.status, r.sent_at = "sent", now
                     self._lat_sum += (now - as_utc(r.created_at)).total_seconds()
                     by_prio[r.priority] = by_prio.get(r.priority, 0) + 1
+                await s.execute(delete(SyncPacketRow).where(SyncPacketRow.id.in_([r.id for r in rows])))
                 await s.commit()
                 sent += len(rows)
                 self.sent_total += len(rows)

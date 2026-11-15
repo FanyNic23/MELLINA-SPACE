@@ -8,17 +8,12 @@ from enum import StrEnum
 from typing import Optional
 
 from app.core.config import Settings
+from app.core.crew import CREW
 from app.core.db import utcnow
 from app.schemas.fhir import Indicator, build_observation
 
 log = logging.getLogger("simulator")
 
-CREW = [
-    {"id": "AST-01", "name": "Cmdr. Elena Vargas", "role": "Comandante", "hr": 62, "sys": 116, "dia": 74},
-    {"id": "AST-02", "name": "Dr. Kenji Mori", "role": "Oficial médico", "hr": 66, "sys": 118, "dia": 76},
-    {"id": "AST-03", "name": "Ing. Amara Okafor", "role": "Ingeniera de vuelo", "hr": 70, "sys": 120, "dia": 78},
-    {"id": "AST-04", "name": "Esp. Lucas Meyer", "role": "Especialista EVA", "hr": 64, "sys": 114, "dia": 72},
-]
 
 
 class ScenarioKind(StrEnum):

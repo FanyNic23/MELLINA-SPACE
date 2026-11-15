@@ -58,3 +58,14 @@ desktop.ini
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Modelos locales de Whisper (se descargan con backend/scripts/download_whisper_model.py)
+backend/models/
+
+# Configuración local (la plantilla backend/.env.example sí se versiona)
+.env
+.env.*
+!.env.example
+
+# Runtime local (base SQLite y audio generado)
+backend/runtime/

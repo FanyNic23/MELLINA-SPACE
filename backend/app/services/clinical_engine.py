@@ -4,7 +4,7 @@ Implements Space Early Warning Score (SEWS) and Autonomous Countermeasure Prescr
 """
 
 from typing import List, Tuple
-from app.models import TelemetryRecord, HealthStatusReport, Countermeasure
+from app.schemas.clinical import TelemetryRecord, HealthStatusReport, Countermeasure
 
 
 class SpaceClinicalEngine:

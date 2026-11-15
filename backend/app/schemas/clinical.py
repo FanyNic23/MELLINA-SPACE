@@ -3,7 +3,7 @@ Data Models for Autonomous Health Assessment & Monitoring System (A-HAMS)
 Designed for deep-space long-duration missions (NASA Space Apps Challenge)
 """
 
-from typing import List, Optional, Dict
+from typing import List
 from pydantic import BaseModel, Field
 from datetime import datetime
 

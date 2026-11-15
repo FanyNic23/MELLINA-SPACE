@@ -9,14 +9,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Literal, Optional
 
-import httpx
-from openai import AsyncOpenAI
 from pydantic import BaseModel
 
-from app.core.config import Settings
 from app.schemas.fhir import Indicator
+from app.services.llm import LLM, log_failure
 from app.services.rule_engine import RANK, Evaluation, Level
 from app.services.storage import ObjectStore
+from app.services.tts import TextToSpeech
 
 log = logging.getLogger("copilot")
 
@@ -119,12 +118,13 @@ def rule_based_response(astronaut: dict, evals: list[Evaluation]) -> CopilotResp
     change = f"{top.label.lower()} {direction} {abs(top.delta_pct):.0f}% en los últimos {top.duration_minutes:.0f} minutos"
     projection = _horizon(top.minutes_to_actuar)
     act = any(e.level == Level.ACTUAR for e in evals)
-    spoken = (f"{name}, tu {change}. Si continúa así, {projection}. "
-              f"{_CARDS[group][0].instruction} Estoy contigo.")
+    outlook = f" Si continúa así, {projection}." if top.minutes_to_actuar is not None else ""
+    spoken = f"{name}, tu {change}.{outlook} {_CARDS[group][0].instruction} Estoy contigo."
     return CopilotResponse(
         spoken_message=spoken,
         clinical_assessment="; ".join(e.reason for e in evals[:4]),
-        risk_projection=f"Si la tendencia se mantiene, {projection}.",
+        risk_projection=(f"Si la tendencia se mantiene, {projection}." if top.minutes_to_actuar is not None
+                         else "Sin proyección de empeoramiento por ahora."),
         psychological_support=("Es normal sentir tensión en aislamiento y bajo esfuerzo. Sigue el procedimiento "
                                "paso a paso, respira lento y recuerda que Control está monitoreando contigo."),
         action_cards=_CARDS[group],
@@ -135,15 +135,10 @@ def rule_based_response(astronaut: dict, evals: list[Evaluation]) -> CopilotResp
 
 # ------------------------------------------------------------------ servicio
 class AICopilot:
-    def __init__(self, settings: Settings, store: ObjectStore) -> None:
-        self.s = settings
+    def __init__(self, llm: LLM, store: ObjectStore, tts: TextToSpeech) -> None:
+        self.llm = llm
         self.store = store
-        self._openai = (AsyncOpenAI(api_key=settings.openai_api_key, timeout=25, max_retries=1)
-                        if settings.openai_api_key else None)
-        self._http = httpx.AsyncClient(timeout=25)
-
-    async def aclose(self) -> None:
-        await self._http.aclose()
+        self.tts = tts
 
     # -- API pública
     async def analyze(self, astronaut: dict, evals: list[Evaluation], latest: dict) -> CopilotResult:
@@ -159,40 +154,24 @@ class AICopilot:
     # -- internos
     async def _run(self, prompt: str, astronaut: dict, evals: list[Evaluation]) -> CopilotResult:
         parsed, source = None, "fallback"
-        if self._openai:
+        if await self.llm.ready():
             try:
-                comp = await self._openai.chat.completions.parse(
-                    model=self.s.openai_model,
+                comp = await self.llm.client.chat.completions.parse(
+                    model=self.llm.model,
                     messages=[{"role": "system", "content": SYSTEM_PROMPT},
                               {"role": "user", "content": prompt}],
                     response_format=CopilotResponse,
                     temperature=0.3,
                 )
                 parsed, source = comp.choices[0].message.parsed, "openai"
-            except Exception:
-                log.exception("OpenAI falló; uso respuesta determinista")
+            except Exception as exc:
+                log_failure(log, "Copiloto (OpenAI)", exc)
+                self.llm.failed()
         if parsed is None:
             parsed = rule_based_response(astronaut, evals)
-        audio = await self._tts(parsed.spoken_message)
-        return CopilotResult(parsed, audio, source)  # type: ignore[arg-type]
-
-    async def _tts(self, text: str) -> Optional[str]:
-        if not self.s.elevenlabs_api_key or not text:
-            return None
-        try:
-            r = await self._http.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{self.s.elevenlabs_voice_id}",
-                params={"output_format": "mp3_44100_64"},
-                headers={"xi-api-key": self.s.elevenlabs_api_key},
-                json={"text": text, "model_id": self.s.elevenlabs_model,
-                      "voice_settings": {"stability": 0.7, "similarity_boost": 0.75,
-                                         "style": 0.0, "use_speaker_boost": True}},
-            )
-            r.raise_for_status()
-            return await self.store.save_audio(f"{uuid.uuid4().hex}.mp3", r.content)
-        except Exception:
-            log.exception("ElevenLabs falló; se entrega sólo texto")
-            return None
+        audio = await self.tts.synthesize(parsed.spoken_message)
+        audio_url = await self.store.save_audio(f"{uuid.uuid4().hex}.mp3", audio) if audio else None
+        return CopilotResult(parsed, audio_url, source)  # type: ignore[arg-type]
 
     @staticmethod
     def _context(astronaut: dict, evals: list[Evaluation], latest: dict) -> str:

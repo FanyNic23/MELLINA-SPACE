@@ -6,13 +6,18 @@ Generates a realistic 30-day timeline for 4 crew members aboard a Mars Transit V
 import json
 import random
 import os
+import sys
 from datetime import datetime, timedelta, timezone
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from app.core.crew import CREW  # noqa: E402
+
+IDENTITY = {c["id"]: c for c in CREW}
+
+# Arquetipo clínico de cada tripulante; nombre y rol salen de app/core/crew.py.
 CREW_PROFILES = [
     {
         "id": "ASTRO-01",
-        "name": "Dra. Elena Rostova",
-        "role": "Comandante de Misión",
         "archetype": "nominal",
         "base_hr": 64,
         "base_hrv": 55,
@@ -21,8 +26,6 @@ CREW_PROFILES = [
     },
     {
         "id": "ASTRO-02",
-        "name": "Marcus Vance",
-        "role": "Ingeniero de Vuelo",
         "archetype": "musculoskeletal_atrophy",
         "base_hr": 78,
         "base_hrv": 32,
@@ -31,8 +34,6 @@ CREW_PROFILES = [
     },
     {
         "id": "ASTRO-03",
-        "name": "Dr. Kenji Sato",
-        "role": "Oficial Científico",
         "archetype": "cognitive_fatigue",
         "base_hr": 72,
         "base_hrv": 24,  # Autonomic stress
@@ -41,8 +42,6 @@ CREW_PROFILES = [
     },
     {
         "id": "ASTRO-04",
-        "name": "Dra. Sarah Miller",
-        "role": "Especialista Médica",
         "archetype": "radiation_event",
         "base_hr": 84,
         "base_hrv": 38,
@@ -87,8 +86,8 @@ def generate_mission_dataset(days: int = 14):
                 "timestamp": day_time.isoformat(),
                 "mission_day": day + 1,
                 "crew_id": crew["id"],
-                "name": crew["name"],
-                "role": crew["role"],
+                "name": IDENTITY[crew["id"]]["name"],
+                "role": IDENTITY[crew["id"]]["role"],
                 "heart_rate": round(hr, 1),
                 "hrv": round(hrv, 1),
                 "spo2": round(random.uniform(97.0, 99.2), 1),

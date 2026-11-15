@@ -10,7 +10,7 @@ El resto de tu sistema (UI, motor clínico, contramedidas) NO necesita modificar
 
 from typing import Dict, Any, List
 from datetime import datetime
-from app.models import (
+from app.schemas.clinical import (
     TelemetryRecord,
     VitalMetrics,
     EnvironmentalMetrics,

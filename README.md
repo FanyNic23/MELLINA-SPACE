@@ -103,19 +103,35 @@ desafio_nasa/
 │   └── crew_telemetry_sample.json     # Dataset sintético de 4 perfiles y 14 días de misión
 │
 ├── backend/
-│   ├── requirements.txt               # Dependencias (FastAPI, uvicorn, pydantic, numpy)
+│   ├── .env.example                   # Configuración documentada (copiar a backend/.env)
+│   ├── requirements.txt               # Dependencias del Edge Core
+│   ├── run.py                         # Arranque con la configuración de backend/.env
 │   ├── app/
-│   │   ├── __init__.py                # Módulo Python del core
-│   │   ├── main.py                    # API Edge FastAPI con endpoints clínicos y DTN
-│   │   ├── models.py                  # Modelos de datos Pydantic fuertemente tipados
-│   │   ├── clinical_engine.py         # Motor de cálculo SEWS y prescripción médica
-│   │   └── data_adapter.py            # ⭐ Adaptador universal para los datasets de la NASA
-│   └── scripts/
-│       └── generate_synthetic_data.py # Generador de datos sintéticos con anomalías clínicas
+│   │   ├── main.py                    # API única: telemetría en tiempo real + SEWS + voz
+│   │   ├── core/                      # Configuración, base de datos y tripulación (crew.py)
+│   │   ├── models/                    # Tablas: observaciones FHIR, alertas, cola Tierra-Espacio
+│   │   ├── schemas/                   # FHIR Observation, API y modelos clínicos SEWS
+│   │   ├── routers/                   # /api/* (SEWS, enlace, PVT) y voz (STT/TTS, comando al copiloto)
+│   │   └── services/
+│   │       ├── rule_engine.py         # Motor de reglas: umbrales + línea base adaptativa + proyección
+│   │       ├── telemetry_service.py   # Ingesta FHIR -> reglas -> alertas -> copiloto -> WebSocket
+│   │       ├── ai_copilot.py          # Copiloto GPT (o reglas si no hay clave)
+│   │       ├── simulator.py           # Simulador de crisis: tormenta solar, insomnio, EVA
+│   │       ├── sync_queue.py          # Store-and-forward Tierra-Espacio (AOS / LOS)
+│   │       ├── stt.py / tts.py        # Voz: Whisper local (u OpenAI / Deepgram) y ElevenLabs
+│   │       ├── clinical_engine.py     # Motor de cálculo SEWS y prescripción médica
+│   │       └── data_adapter.py        # ⭐ Adaptador universal para los datasets de la NASA
+│   ├── scripts/
+│   │   ├── generate_synthetic_data.py # Generador de datos sintéticos con anomalías clínicas
+│   │   └── download_whisper_model.py  # Descarga única del modelo de voz local
+│   └── tests/
+│       └── smoke_test.py              # Prueba de extremo a extremo (sin claves externas)
 │
 └── frontend/
     ├── index.html                     # Dashboard HUD de la Estación (Gráficas, Telemetría, Prescripción)
-    └── smartwatch.html                # ⌚ Interfaz Smartwatch de muñeca (Dial circular, Swipes, Mini PVT)
+    ├── smartwatch.html                # ⌚ Interfaz Smartwatch de muñeca (Dial circular, Swipes, Mini PVT)
+    ├── asistente.html                 # 🗣️ Asistente 3D del reloj con voz (ES / EN)
+    └── assistant/                     # Avatar 3D, voz, micrófono y diagnóstico hablado
 ```
 
 ---
@@ -144,10 +160,18 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
    .\venv\Scripts\Activate.ps1
    ```
 
-2. **Instalar dependencias:**
+2. **Instalar dependencias y crear la configuración local:**
    ```bash
    pip install -r backend/requirements.txt
+   cp backend/.env.example backend/.env
    ```
+   Toda la configuración (host, puerto, CORS, ruta de datos y Whisper) vive en `backend/.env`, que no se versiona. La plantilla comentada es `backend/.env.example`.
+
+   **(Opcional) Reconocimiento de voz local para el asistente del reloj:** descarga una sola vez el modelo Whisper (~460 MB, queda en `backend/models/`, fuera de git). Después el micrófono funciona sin internet:
+   ```bash
+   python backend/scripts/download_whisper_model.py
+   ```
+   Ajustes en `backend/.env`: `WHISPER_MODEL` (`base` es más rápido, `small` por defecto entiende mejor), `WHISPER_DEVICE=mps` (GPU de Apple Silicon, experimental) y `WHISPER_ALLOW_DOWNLOAD=false` para prohibir cualquier descarga.
 
 3. **(Opcional) Generar telemetría sintética:**
    ```bash
@@ -156,10 +180,23 @@ El frontend incluye modo autónomo con datos de telemetría precargados:
 
 4. **Iniciar el servidor local Edge de la nave:**
    ```bash
-   python -m uvicorn app.main:app --reload --app-dir backend
+   python backend/run.py
    ```
+   * Usa `SERVER_HOST`, `SERVER_PORT` y `SERVER_RELOAD` de `backend/.env`. Si cambias el host o el puerto, actualiza también `frontend/assistant/config.js`.
    * El servidor iniciará en: `http://127.0.0.1:8000`
    * Documentación interactiva de la API (Swagger UI): `http://127.0.0.1:8000/docs`
+   * **Modo en línea y offline (`AI_MODE=auto`)**: con claves en `backend/.env` e internet, el asistente usa el modo en línea, el más completo; sin ellas, o si una API falla, cae solo al modo offline:
+
+     | | En línea | Offline |
+     |---|---|---|
+     | Entender y responder | GPT (`OPENAI_API_KEY`): cualquier pregunta, con todo el contexto de la misión y memoria de la conversación | Palabras clave y respuestas locales |
+     | Escuchar | OpenAI Whisper (o Deepgram) | Whisper local |
+     | Hablar | ElevenLabs (`ELEVENLABS_API_KEY`) | Voces del sistema |
+     | Copiloto de alertas | GPT con Structured Outputs | Reglas deterministas |
+
+     El estado actual se consulta en `GET /api/assistant/status`. PostgreSQL y AWS también son opcionales (ver `backend/.env.example`).
+   * Simulador de crisis: `POST /simulator/start` y luego `POST /simulator/scenarios/spe` (o `insomnia`, `eva`). El asistente del reloj anuncia las alertas en tiempo real.
+   * Prueba de extremo a extremo: `cd backend && python -m tests.smoke_test`
 
 5. **Abrir el Frontend:**
    * Abre `frontend/index.html` en tu navegador.

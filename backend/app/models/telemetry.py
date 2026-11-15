@@ -64,17 +64,16 @@ class AlertRow(Base):
 
 
 class SyncPacketRow(Base):
-    """Buffer local store-and-forward (Tierra-Espacio)."""
+    """Buffer local store-and-forward (Tierra-Espacio). Lo entregado se borra; queda lo pendiente o fallido."""
     __tablename__ = "sync_queue"
     __table_args__ = (Index("ix_sync_pending", "status", "priority", "created_at"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    kind: Mapped[str] = mapped_column(String(32))  # observation_bundle | alert | copilot_advice | voice_log
+    kind: Mapped[str] = mapped_column(String(32))  # observation_bundle | alert | copilot_advice | voice_log | pvt_test
     priority: Mapped[int] = mapped_column(Integer)  # 0 = crítica
     astronaut_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     payload: Mapped[dict] = mapped_column(JSONType)
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False)
-    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | sent | failed
+    status: Mapped[str] = mapped_column(String(10), default="pending")  # pending | failed
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

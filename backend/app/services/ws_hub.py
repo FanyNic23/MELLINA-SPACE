@@ -1,8 +1,12 @@
+import asyncio
 import json
 from collections import defaultdict
 from typing import Optional
 
 from fastapi import WebSocket
+
+# Un cliente que no recibe en este tiempo se desconecta: no puede frenar la ingesta de telemetría.
+SEND_TIMEOUT_S = 2.0
 
 
 class WSHub:
@@ -25,9 +29,11 @@ class WSHub:
         if not targets:
             return
         text = json.dumps(event, default=str, ensure_ascii=False)
-        for ws in targets:
-            try:
-                await ws.send_text(text)
-            except Exception:
-                for subs in self._subs.values():
-                    subs.discard(ws)
+        await asyncio.gather(*(self._send(ws, text) for ws in targets))
+
+    async def _send(self, ws: WebSocket, text: str) -> None:
+        try:
+            await asyncio.wait_for(ws.send_text(text), SEND_TIMEOUT_S)
+        except Exception:
+            for subs in self._subs.values():
+                subs.discard(ws)
