@@ -44,7 +44,7 @@ export class VoiceListener {
           this.engine = 'server';
           this.server = stt;
         }
-      } catch (err) {
+      } catch {
         // Edge Core no disponible
       } finally {
         clearTimeout(timer);

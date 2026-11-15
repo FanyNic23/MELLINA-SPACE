@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { api, OfflineError } from '../api/client'
 import type { Astronaut, MissionEnvironment } from '../api/types'
+import { useI18n } from '../i18n'
 
 interface MissionState {
   crew: Astronaut[]
@@ -27,6 +28,7 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   const [offline, setOffline] = useState(false)
   const [version, setVersion] = useState(0)
   const retry = useRef<number | undefined>(undefined)
+  const { lang } = useI18n()
 
   const refresh = useCallback(async function load(): Promise<void> {
     try {
@@ -45,11 +47,12 @@ export function MissionProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    // Carga inicial desde el Edge Core (sistema externo).
+    // Carga desde el Edge Core (sistema externo) al iniciar y al cambiar de idioma: diagnósticos,
+    // contramedidas y entornos llegan redactados en el idioma activo.
     // oxlint-disable-next-line react/set-state-in-effect
     void refresh()
     return () => window.clearTimeout(retry.current)
-  }, [refresh])
+  }, [refresh, lang])
 
   const setEnvironment = useCallback(async (id: string) => {
     await api.setEnvironment(id)

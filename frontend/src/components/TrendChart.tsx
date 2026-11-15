@@ -1,12 +1,14 @@
 import { CategoryScale, Chart, LinearScale, LineController, LineElement, PointElement, Tooltip } from 'chart.js'
 import { useEffect, useRef } from 'react'
 import type { Astronaut } from '../api/types'
+import { useI18n } from '../i18n'
 
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip)
 
 /** Tendencia de la misión: HRV (cian) y Δ masa muscular (blanco), sin puntos ni leyenda. */
 export function TrendChart({ astro }: { astro: Astronaut }) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  const { t } = useI18n()
 
   useEffect(() => {
     if (!canvas.current) return
@@ -34,5 +36,5 @@ export function TrendChart({ astro }: { astro: Astronaut }) {
     return () => chart.destroy()
   }, [astro])
 
-  return <canvas ref={canvas} aria-label="Tendencia de HRV y masa muscular" role="img" />
+  return <canvas ref={canvas} aria-label={t.crew.chartAria} role="img" />
 }

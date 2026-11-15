@@ -212,6 +212,7 @@ python backend/run.py
 ```
 
 * Dashboard: `http://127.0.0.1:8000` · Reloj: `http://127.0.0.1:8000/#/reloj` · API: `http://127.0.0.1:8000/docs`
+* **Idioma:** la interfaz arranca en **inglés**; el selector **EN / ES** de la cabecera la cambia a español y se recuerda en el navegador. El motor clínico (diagnósticos, contramedidas, gemelo digital, rutina y entornos) responde en el idioma pedido con la cabecera `X-Lang`, y Mellina habla y escucha en ese idioma.
 * Toda la configuración (host, puerto, rutas de datos y Whisper) vive en `backend/.env`. `WHISPER_MODEL=base` es más rápido; `small` (por defecto) entiende mejor.
 * **100% offline:** el sistema no usa ninguna API ni servicio en la nube. Todo corre en el hábitat:
 

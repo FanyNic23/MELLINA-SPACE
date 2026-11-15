@@ -1,16 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Astronaut } from '../../api/types'
+import { useI18n } from '../../i18n'
 import { MissionDiagnosis as D, type AssistantMember, type MissionData } from '../../lib/assistant/diagnosis'
 import { HoloAvatar } from '../../lib/assistant/HoloAvatar'
 import { VoiceListener } from '../../lib/assistant/listener'
 import { VoiceEngine } from '../../lib/assistant/voice'
 
 export type Topic = 'greeting' | 'health' | 'environment' | 'ship' | 'full'
+
+const LISTENING = '\u0000listening'
+const PROCESSING = '\u0000processing'
 export interface LogLine { who: string; text: string; user?: boolean }
 
 /**
  * Asistente Mellina dentro del reloj, 100% local: holograma, voz del sistema, micrófono con Whisper
- * en el Edge Core y respuestas generadas con los datos del motor clínico.
+ * en el Edge Core y respuestas generadas con los datos del motor clínico. Habla y escucha en el idioma
+ * activo de la interfaz.
  */
 export function useAssistant(current: Astronaut | null, onSelectCrew: (id: string) => void) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -19,8 +24,8 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
   const listener = useRef<VoiceListener | null>(null)
   const mission = useRef<MissionData>({ online: false, crew: [], dtn: null })
   const greeted = useRef(false)
-  const idle = `Toca para hablar con ${D.ASSISTANT_NAME}`
-  const [caption, setCaption] = useState(idle)
+  const { lang, t: { watch: t } } = useI18n()
+  const [caption, setCaption] = useState<string | null>(null) // null = invitación a hablar
   const [log, setLog] = useState<LogLine[]>([])
   const [speaking, setSpeaking] = useState(false)
   const [listening, setListening] = useState(false)
@@ -50,14 +55,14 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
       onState: state => {
         avatar.current?.setMode(state === 'idle' ? 'idle' : state)
         setSpeaking(state === 'speaking')
-        if (state === 'idle') window.setTimeout(() => setCaption(c => (listener.current?.busy ? c : idle)), 2500)
+        if (state === 'idle') window.setTimeout(() => setCaption(c => (listener.current?.busy ? c : null)), 2500)
       },
     })
     listener.current = new VoiceListener({
       onState: state => {
         setListening(state === 'listening')
-        if (state === 'listening') { avatar.current?.setMode('listening'); setCaption('Te escucho…') }
-        else if (state === 'transcribing') { avatar.current?.setMode('thinking'); setCaption('Procesando…') }
+        if (state === 'listening') { avatar.current?.setMode('listening'); setCaption(LISTENING) }
+        else if (state === 'transcribing') { avatar.current?.setMode('thinking'); setCaption(PROCESSING) }
         else avatar.current?.setMode('idle')
       },
     })
@@ -70,7 +75,14 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
       listener.current?.cancel()
       avatar.current?.dispose()
     }
-  }, [idle])
+  }, [])
+
+  // Idioma de la voz, del reconocimiento (Whisper) y de las respuestas.
+  useEffect(() => {
+    D.setLanguage(lang)
+    voice.current?.setLanguage(lang)
+    listener.current?.setLanguage(lang)
+  }, [lang])
 
   useEffect(() => {
     void D.loadMissionData().then(m => { mission.current = m })
@@ -109,22 +121,24 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
     if (!l.engine) await l.init()
     try {
       const said = await l.listen()
-      if (!said) return setCaption('No te escuché. Toca el micrófono e inténtalo de nuevo.')
-      setLog(lg => [{ who: 'TÚ', text: said, user: true }, ...lg])
+      if (!said) return setCaption(t.notHeard)
+      setLog(lg => [{ who: t.you, text: said, user: true }, ...lg])
       const intent = D.intentFrom(said, mission.current.crew)
       if (intent.member && intent.member.id !== current?.id) onSelectCrew(intent.member.id)
       if (intent.type === 'select' && intent.member) void say(D.greeting(intent.member))
       else if (intent.type === 'stop') voice.current?.stop()
       else void answer(intent.type as Topic)
     } catch (err) {
-      setCaption((err as Error).name === 'NotAllowedError' ? 'Necesito permiso para usar el micrófono.' : 'No pude procesar tu voz.')
+      setCaption((err as Error).name === 'NotAllowedError' ? t.micPermission : t.voiceFailed)
     }
-  }, [answer, current, onSelectCrew, say])
+  }, [answer, current, onSelectCrew, say, t])
 
   const lookAt = useCallback((x: number, y: number) => avatar.current?.lookAt(x, y), [])
   const stop = useCallback(() => voice.current?.stop(), [])
 
-  return { attachCanvas, caption, log, speaking, listening, micReady, answer, tap, talk, lookAt, stop }
+  // Estados del micrófono: marcadores que se traducen al pintar (el listener vive fuera de React).
+  const shown = caption === LISTENING ? t.listening : caption === PROCESSING ? t.processing : caption ?? t.idle(D.ASSISTANT_NAME)
+  return { attachCanvas, caption: shown, log, speaking, listening, micReady, answer, tap, talk, lookAt, stop }
 }
 
 export type AssistantApi = ReturnType<typeof useAssistant>

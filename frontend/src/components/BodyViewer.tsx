@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BodyModel, loadAnatomy } from '../lib/body/BodyModel'
 import '../lib/body/bodyHud.css'
+import { useI18n } from '../i18n'
 import { useBody } from '../state/body'
 import { useMission } from '../state/mission'
 import { ForecastBar } from './ForecastBar'
@@ -12,6 +13,7 @@ export function BodyViewer() {
   const { attach, setView } = useBody()
   const { current, version } = useMission()
   const [loading, setLoading] = useState(true)
+  const { t } = useI18n()
 
   useEffect(() => {
     let model: BodyModel | null = null
@@ -32,7 +34,7 @@ export function BodyViewer() {
   return (
     <section ref={section} className="body-stage relative h-[72vh] min-h-[480px] overflow-hidden rounded-xl lg:h-full lg:min-h-0 [&:fullscreen]:rounded-none">
       <div ref={stage} className="absolute inset-0" />
-      {loading && <div className="absolute inset-0 grid place-items-center font-mono text-xs text-slate-500">Cargando anatomía…</div>}
+      {loading && <div className="absolute inset-0 grid place-items-center font-mono text-xs text-slate-500">{t.body.loading}</div>}
       <ForecastBar key={`${current?.id}-${version}`} />
     </section>
   )

@@ -17,11 +17,12 @@
  *   body.reset()                // vuelve a la vista general
  */
 import * as THREE from 'three';
+import { tr } from '../../i18n';
 import { svgIcon } from '../svgIcons';
 import { HAZARDS, levelOf, SYSTEMS } from './clinicalMap';
 
 const LEVEL_COLORS = [0x2dd4bf, 0x38bdf8, 0xef4444]; // nominal · vigilar · crítico (rojo de alarma)
-const LEVEL_LABELS = ['NOMINAL', 'VIGILAR', 'CRÍTICO'];
+const levelLabel = level => tr().levels[level]; // nominal · vigilar · crítico en el idioma activo
 const HOLO_COLOR = 0x22d3ee;
 const hex = c => '#' + c.toString(16).padStart(6, '0');
 const icon = (name, cls) => svgIcon(name, cls);
@@ -237,11 +238,11 @@ export class BodyModel {
       <div class="hud-corners"><i></i><i></i><i></i><i></i></div>
       <div class="hud-scanlines"></div>
       <div class="hud-vignette"></div>
-      <div class="hud-top"><span class="hud-title">ESCANEO BIOMÉTRICO</span><span class="hud-sub"></span></div>
+      <div class="hud-top"><span class="hud-title"></span><span class="hud-sub"></span></div>
       <svg class="hud-svg"><g class="hud-links"></g><g class="hud-reticles"></g></svg>
       <div class="hud-panel" hidden></div>
-      <button class="hud-reset" type="button" hidden>${icon('arrow-counter-clockwise')} Vista general</button>
-      <button class="hud-fullscreen" type="button" aria-label="Pantalla completa">${icon('corners-out')}</button>`;
+      <button class="hud-reset" type="button" hidden>${icon('arrow-counter-clockwise')} <span></span></button>
+      <button class="hud-fullscreen" type="button">${icon('corners-out')}</button>`;
     this.container.appendChild(this.hud);
     this.hudSub = this.hud.querySelector('.hud-sub');
     this.hudLinks = this.hud.querySelector('.hud-links');
@@ -263,16 +264,26 @@ export class BodyModel {
       else if (t.dataset.system) this.focusSystem(t.dataset.system);
       else this.showHazard(t.dataset.hazard);
     });
+    this._labelHud();
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'body-tooltip';
     this.tooltip.hidden = true;
     this.container.appendChild(this.tooltip);
   }
 
+  // Textos fijos del HUD en el idioma activo (se repiten en cada update por si cambió).
+  _labelHud() {
+    const t = tr().body;
+    this.hud.querySelector('.hud-title').textContent = t.scan;
+    this.hudReset.querySelector('span').textContent = t.overview;
+    this.hud.querySelector('.hud-fullscreen').setAttribute('aria-label', t.fullscreen);
+  }
+
   // ------------------------------------------------------------------ datos
   update(astro) {
     this.astro = astro;
     for (const sys of SYSTEMS) this.levels[sys.id] = sys.level(astro);
+    this._labelHud();
     this.hudSub.textContent = `${astro.id} · ${astro.name}`;
     if (this.mode === 'system') this._renderSystemPanel(this.activeId);
     else if (this.mode === 'hazard') this._renderHazardPanel(this.activeId);
@@ -284,7 +295,7 @@ export class BodyModel {
     if (!this.astro) return [];
     return SYSTEMS.map(sys => {
       const level = this.levels[sys.id];
-      return { id: sys.id, label: sys.label, organ: sys.organ, level, levelLabel: LEVEL_LABELS[level],
+      return { id: sys.id, label: sys.label, organ: sys.organ, level, levelLabel: levelLabel(level),
         color: hex(LEVEL_COLORS[level]), damage: sys.damage(this.astro), detail: sys.detail(this.astro) };
     });
   }
@@ -294,7 +305,7 @@ export class BodyModel {
     return HAZARDS.map(h => {
       const severity = h.severity(this.astro), level = levelOf(severity);
       return { id: h.id, name: h.name, icon: h.icon, summary: h.summary, systems: h.systems, severity, level,
-        levelLabel: LEVEL_LABELS[level], color: hex(LEVEL_COLORS[level]) };
+        levelLabel: levelLabel(level), color: hex(LEVEL_COLORS[level]) };
     });
   }
 
@@ -383,36 +394,36 @@ export class BodyModel {
   _renderSystemPanel(id) {
     const sys = SYSTEMS.find(s => s.id === id), a = this.astro;
     const level = this.levels[id], color = hex(LEVEL_COLORS[level]), pct = sys.damage(a);
-    const hazards = HAZARDS.filter(h => h.systems.includes(id));
+    const hazards = HAZARDS.filter(h => h.systems.includes(id)), t = tr().body;
     this.hudPanel.style.setProperty('--accent', color);
     this.hudPanel.innerHTML = `
-      <button class="hud-close" data-close aria-label="Cerrar">${icon('x-circle')}</button>
-      <div class="hud-kicker">ÓRGANO ANALIZADO</div>
+      <button class="hud-close" data-close aria-label="${t.close}">${icon('x-circle')}</button>
+      <div class="hud-kicker">${t.organKicker}</div>
       <div class="hud-name">${sys.organ}</div>
       <div class="hud-sys">${sys.label}</div>
       <div class="hud-score">${this._gauge(pct, color)}
-        <div><div class="hud-chip" style="color:${color}">${LEVEL_LABELS[level]}</div>
-        <div class="hud-caption">índice de daño estimado</div></div></div>
+        <div><div class="hud-chip" style="color:${color}">${levelLabel(level)}</div>
+        <div class="hud-caption">${t.damageCaption}</div></div></div>
       ${this._rows(sys.metrics(a))}
-      <div class="hud-kicker">CAUSAS ESPACIALES</div>
+      <div class="hud-kicker">${t.causes}</div>
       <div class="hud-tags">${hazards.map(h => `<button type="button" data-hazard="${h.id}">${icon(h.icon)} ${h.name}</button>`).join('')}</div>`;
     this._animatePanel();
   }
 
   _renderHazardPanel(id) {
     const h = HAZARDS.find(x => x.id === id), a = this.astro;
-    const pct = h.severity(a), level = levelOf(pct), color = hex(LEVEL_COLORS[level]);
+    const pct = h.severity(a), level = levelOf(pct), color = hex(LEVEL_COLORS[level]), t = tr().body;
     this.hudPanel.style.setProperty('--accent', color);
     this.hudPanel.innerHTML = `
-      <button class="hud-close" data-close aria-label="Cerrar">${icon('x-circle')}</button>
-      <div class="hud-kicker">AMENAZA DEL ESPACIO PROFUNDO</div>
+      <button class="hud-close" data-close aria-label="${t.close}">${icon('x-circle')}</button>
+      <div class="hud-kicker">${t.hazardKicker}</div>
       <div class="hud-name"><span class="hud-name-icon">${icon(h.icon)}</span>${h.name}</div>
       <div class="hud-score">${this._gauge(pct, color)}
-        <div><div class="hud-chip" style="color:${color}">${LEVEL_LABELS[level]}</div>
-        <div class="hud-caption">gravedad para este tripulante</div></div></div>
+        <div><div class="hud-chip" style="color:${color}">${levelLabel(level)}</div>
+        <div class="hud-caption">${t.severityCaption}</div></div></div>
       <p class="hud-text">${h.summary}</p>
       ${this._rows(h.metrics(a))}
-      <div class="hud-kicker">ÓRGANOS AFECTADOS</div>
+      <div class="hud-kicker">${t.organsAffected}</div>
       <div class="hud-organs">${h.systems.map(sid => {
         const s = SYSTEMS.find(x => x.id === sid), d = s.damage(a), c = hex(LEVEL_COLORS[this.levels[sid]]);
         return `<button type="button" data-system="${sid}"><span>${s.organ}</span><i style="--w:${d}%;--c:${c}"></i><b style="color:${c}">${d}%</b></button>`;
@@ -562,7 +573,7 @@ export class BodyModel {
     this._setHover(id);
     if (!id || !this.astro) { this.tooltip.hidden = true; return; }
     const s = this.status().find(x => x.id === id);
-    this.tooltip.innerHTML = `<strong>${s.organ}</strong><span style="color:${s.color}">${s.levelLabel} · daño ${s.damage}%</span><small>Clic para analizar</small>`;
+    this.tooltip.innerHTML = `<strong>${s.organ}</strong><span style="color:${s.color}">${tr().body.tooltip(s.levelLabel, s.damage)}</span><small>${tr().body.clickToAnalyze}</small>`;
     const rect = this.container.getBoundingClientRect();
     this.tooltip.style.left = `${Math.max(8, Math.min(e.clientX - rect.left + 14, rect.width - 190))}px`;
     this.tooltip.style.top = `${e.clientY - rect.top + 14}px`;

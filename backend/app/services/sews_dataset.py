@@ -1,7 +1,7 @@
 """Dataset de telemetría por días de misión que alimenta el motor clínico SEWS.
 
 Se lee una vez y se mantiene en memoria; sólo se recarga si el archivo cambia en disco.
-Las evaluaciones SEWS se calculan una vez por versión del archivo, no en cada petición.
+Las evaluaciones SEWS se calculan una vez por versión del archivo (en cada idioma), no en cada petición.
 
 Panel de simulación: `simulate()` superpone valores introducidos por el operador sobre el último
 registro de un tripulante (sin tocar el archivo) y el motor clínico lo reevalúa al instante.
@@ -17,6 +17,7 @@ import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
+from app.core import i18n
 from app.schemas.clinical import HealthStatusReport
 from app.services.clinical_engine import SpaceClinicalEngine
 from app.services.data_adapter import NASADataAdapter
@@ -33,7 +34,7 @@ class SewsDataset:
         self._lock = threading.Lock()
         self._mtime: Optional[float] = None
         self._history: Dict[str, List[Dict[str, Any]]] = {}
-        self._reports: Dict[str, HealthStatusReport] = {}
+        self._reports: Dict[str, Dict[str, HealthStatusReport]] = {}  # crew_id -> idioma -> evaluación
         self._overrides: Dict[str, Dict[str, Any]] = {}
 
     def _refresh(self) -> None:
@@ -60,11 +61,15 @@ class SewsDataset:
 
     # ------------------------------------------------------------ evaluación
     @staticmethod
-    def _evaluate(rec: Dict[str, Any]) -> HealthStatusReport:
-        return SpaceClinicalEngine.evaluate_crew_member(
-            record=NASADataAdapter.from_hackathon_raw_dict(rec),
-            name=rec.get("name", rec["crew_id"]), role=rec.get("role", "Astronaut"),
-            mission_day=rec.get("mission_day", 1))
+    def _evaluate(rec: Dict[str, Any]) -> Dict[str, HealthStatusReport]:
+        record = NASADataAdapter.from_hackathon_raw_dict(rec)
+        out = {}
+        for lang in i18n.LANGS:
+            with i18n.use_lang(lang):
+                out[lang] = SpaceClinicalEngine.evaluate_crew_member(
+                    record=record, name=rec.get("name", rec["crew_id"]), role=rec.get("role", "Astronaut"),
+                    mission_day=rec.get("mission_day", 1))
+        return out
 
     def _merged(self, crew_id: str) -> Dict[str, Any]:
         rec = {**self._history[crew_id][-1], **self._checkins.get(crew_id, {})}
@@ -85,7 +90,7 @@ class SewsDataset:
                 with open(self.checkins_path, "w", encoding="utf-8") as f:
                     json.dump(self._checkins, f, ensure_ascii=False, indent=1)
             self._reports[crew_id] = self._evaluate(self._merged(crew_id))
-        return self._reports[crew_id]
+        return self._reports[crew_id][i18n.current()]
 
     # ------------------------------------------------------------ simulación
     def simulate(self, crew_id: str, values: Dict[str, Any]) -> Optional[HealthStatusReport]:
@@ -95,7 +100,7 @@ class SewsDataset:
         with self._lock:
             self._overrides[crew_id] = {**self._overrides.get(crew_id, {}), **values}
             self._reports[crew_id] = self._evaluate(self._merged(crew_id))
-        return self._reports[crew_id]
+        return self._reports[crew_id][i18n.current()]
 
     def reset(self, crew_id: Optional[str] = None) -> None:
         self._refresh()
@@ -131,4 +136,5 @@ class SewsDataset:
 
     def report(self, crew_id: str) -> Optional[HealthStatusReport]:
         self._refresh()
-        return self._reports.get(crew_id)
+        reports = self._reports.get(crew_id)
+        return reports[i18n.current()] if reports else None

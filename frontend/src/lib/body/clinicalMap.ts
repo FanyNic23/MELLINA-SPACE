@@ -4,16 +4,19 @@
  *
  * Los niveles de los sistemas usan los umbrales de backend/app/services/clinical_engine.py. El porcentaje de
  * daño (0-100) está calibrado para que ~35 % coincida con "vigilar" y ~70 % con "crítico".
+ *
+ * Los textos (nombres, órganos, resúmenes) son getters que leen el idioma activo (i18n) en cada lectura.
  */
 import type { Astronaut, MissionEnvironment, SystemId } from '../../api/types'
+import { tr } from '../../i18n'
 
 export type Level = 0 | 1 | 2
 type Metric = [string, string | number]
 
 export interface SystemDef {
   id: SystemId
-  label: string
-  organ: string
+  readonly label: string
+  readonly organ: string
   level: (a: Astronaut) => Level
   damage: (a: Astronaut) => number
   detail: (a: Astronaut) => string
@@ -22,10 +25,10 @@ export interface SystemDef {
 
 export interface HazardDef {
   id: string
-  name: string
+  readonly name: string
   icon: string
   effect: 'radiation' | 'float' | 'isolation' | 'pulse' | 'haze'
-  summary: string
+  readonly summary: string
   systems: SystemId[]
   severity: (a: Astronaut) => number
   metrics: (a: Astronaut) => Metric[]
@@ -54,53 +57,56 @@ const D = {
   radiation: (a: Astronaut) => a.environment.radiation / ENV.radiation_spe * 72,
 };
 const worst = (a: Astronaut, keys: (keyof typeof D)[]) => clamp(Math.max(...keys.map(k => D[k](a))));
+const M = () => tr().metric
+const sys = (id: SystemId) => tr().systems[id]
+const sensory = (a: Astronaut) => tr().sensory[a.psych.sensory] ?? a.psych.sensory
 
 export const SYSTEMS: SystemDef[] = [
   {
-    id: 'neuro', label: 'Cerebro · Neurocognitivo', organ: 'Corteza cerebral',
+    id: 'neuro', get label() { return sys('neuro').label }, get organ() { return sys('neuro').organ },
     level: a => (a.cognitive.rt > 350 || a.cognitive.lapses >= 3 || a.cognitive.sleep < 5) ? 2
       : (a.cognitive.rt > 280 || a.cognitive.lapses >= 1 || a.cognitive.sleep < 6) ? 1 : 0,
     damage: a => worst(a, ['reaction', 'lapses', 'sleep']),
-    detail: a => `PVT ${a.cognitive.rt} ms · ${a.cognitive.lapses} lapsos · sueño ${a.cognitive.sleep} h`,
-    metrics: a => [['Reacción PVT', `${a.cognitive.rt} ms`], ['Lapsos >500 ms', a.cognitive.lapses], ['Sueño', `${a.cognitive.sleep} h`]],
+    detail: a => tr().systems.neuro.detail(a.cognitive.rt, a.cognitive.lapses, a.cognitive.sleep),
+    metrics: a => [[M().pvt, `${a.cognitive.rt} ms`], [M().lapses, a.cognitive.lapses], [M().sleep, `${a.cognitive.sleep} h`]],
   },
   {
-    id: 'psych', label: 'Mente · Sistema límbico', organ: 'Sistema límbico',
+    id: 'psych', get label() { return sys('psych').label }, get organ() { return sys('psych').organ },
     level: a => (a.psych.voice > 0.7 || a.psych.coherence < 60 || a.psych.sensory === 'SEVERO') ? 2
       : (a.psych.voice > 0.4 || a.psych.coherence < 75 || a.psych.sensory === 'MODERADO') ? 1 : 0,
     damage: a => worst(a, ['voice', 'coherence', 'sensory']),
-    detail: a => `${a.psych.mood} · coherencia ${a.psych.coherence}% · estrés vocal ${a.psych.voice}`,
-    metrics: a => [['Estado', a.psych.mood], ['Coherencia', `${a.psych.coherence}%`], ['Estrés vocal', a.psych.voice], ['Privación sensorial', a.psych.sensory]],
+    detail: a => tr().systems.psych.detail(a.psych.mood, a.psych.coherence, a.psych.voice),
+    metrics: a => [[M().state, a.psych.mood], [M().coherence, `${a.psych.coherence}%`], [M().vocalStress, a.psych.voice], [M().sensory, sensory(a)]],
   },
   {
-    id: 'heart', label: 'Corazón · Cardiovascular', organ: 'Corazón',
+    id: 'heart', get label() { return sys('heart').label }, get organ() { return sys('heart').organ },
     level: a => (a.vitals.hrv < 20 || a.vitals.hr > 100 || a.vitals.hr < 45) ? 2 : a.vitals.hrv < 35 ? 1 : 0,
     damage: a => worst(a, ['hrv', 'hr']),
-    detail: a => `HRV ${a.vitals.hrv} ms · pulso ${a.vitals.hr} bpm · PA ${a.vitals.bp}`,
-    metrics: a => [['HRV (RMSSD)', `${a.vitals.hrv} ms`], ['Pulso', `${a.vitals.hr} bpm`], ['Presión', a.vitals.bp]],
+    detail: a => tr().systems.heart.detail(a.vitals.hrv, a.vitals.hr, a.vitals.bp),
+    metrics: a => [[M().hrv, `${a.vitals.hrv} ms`], [M().pulse, `${a.vitals.hr} bpm`], [M().pressure, a.vitals.bp]],
   },
   {
-    id: 'lungs', label: 'Pulmones · Respiratorio', organ: 'Pulmones',
+    id: 'lungs', get label() { return sys('lungs').label }, get organ() { return sys('lungs').organ },
     level: a => (a.vitals.spo2 < 94 || a.environment.co2 > ENV.co2_max + 2) ? 2
       : (a.vitals.spo2 < 96 || a.environment.co2 > ENV.co2_max) ? 1 : 0,
     damage: a => worst(a, ['spo2', 'co2']),
-    detail: a => `SpO₂ ${a.vitals.spo2}% · CO₂ cabina ${a.environment.co2} mmHg`,
-    metrics: a => [['SpO₂', `${a.vitals.spo2}%`], ['CO₂ cabina', `${a.environment.co2} mmHg`]],
+    detail: a => tr().systems.lungs.detail(a.vitals.spo2, a.environment.co2),
+    metrics: a => [[M().spo2, `${a.vitals.spo2}%`], [M().co2, `${a.environment.co2} mmHg`]],
   },
   {
-    id: 'muscle', label: 'Músculo · Musculoesquelético', organ: 'Músculo esquelético',
+    id: 'muscle', get label() { return sys('muscle').label }, get organ() { return sys('muscle').organ },
     level: a => (a.muscle.delta < -5 || a.muscle.exercise_pct < 50) ? 2
       : (a.muscle.delta < -2.5 || a.muscle.exercise_pct < 70) ? 1 : 0,
     damage: a => worst(a, ['atrophy', 'exercise']),
-    detail: a => `Masa muscular ${a.muscle.delta}% · ARED ${a.muscle.exercise_pct}%`,
-    metrics: a => [['Masa muscular', `${a.muscle.delta}%`], ['Cumplimiento ARED', `${a.muscle.exercise_pct}%`]],
+    detail: a => tr().systems.muscle.detail(a.muscle.delta, a.muscle.exercise_pct),
+    metrics: a => [[M().muscle, `${a.muscle.delta}%`], [M().ared, `${a.muscle.exercise_pct}%`]],
   },
   {
-    id: 'radiation', label: 'Radiación · Hueso y médula', organ: 'Esqueleto y médula ósea',
+    id: 'radiation', get label() { return sys('radiation').label }, get organ() { return sys('radiation').organ },
     level: a => a.environment.radiation > ENV.radiation_spe ? 2 : a.environment.radiation > ENV.radiation_watch ? 1 : 0,
     damage: a => worst(a, ['radiation']),
-    detail: a => `Dosis ${a.environment.radiation} μSv/h`,
-    metrics: a => [['Tasa de dosis', `${a.environment.radiation} μSv/h`], ['Umbral nominal', '35 μSv/h']],
+    detail: a => tr().systems.radiation.detail(a.environment.radiation),
+    metrics: a => [[M().doseRate, `${a.environment.radiation} μSv/h`], [M().nominalThreshold, `${ENV.radiation_watch} μSv/h`]],
   },
 ];
 
@@ -108,65 +114,62 @@ export const SYSTEMS: SystemDef[] = [
 // `effect`: animación del visor 3D.
 export const HAZARDS: HazardDef[] = [
   {
-    id: 'radiation', name: 'Radiación espacial', icon: 'radioactive', effect: 'radiation',
-    summary: 'Rayos cósmicos galácticos y tormentas solares (SPE) dañan el ADN de la médula ósea y el sistema nervioso central.',
+    id: 'radiation', get name() { return tr().hazards.radiation.name }, icon: 'radioactive', effect: 'radiation',
+    get summary() { return tr().hazards.radiation.summary },
     systems: ['radiation', 'neuro'],
     severity: a => worst(a, ['radiation']),
-    metrics: a => [['Tasa de dosis', `${a.environment.radiation} μSv/h`]],
+    metrics: a => [[M().doseRate, `${a.environment.radiation} μSv/h`]],
   },
   {
-    id: 'microgravity', name: 'Microgravedad', icon: 'planet', effect: 'float',
-    summary: 'Sin carga gravitacional se pierde masa muscular y densidad ósea (~1-2 % al mes) si no se cumple el ejercicio.',
+    id: 'microgravity', icon: 'planet', effect: 'float',
+    // En la Luna o en Marte la amenaza pasa a ser gravedad parcial (la fija el entorno de misión).
+    get name() { const h = tr().hazards; return ENV.gravity_g > 0 ? h.partialGravity.name(ENV.gravity_g) : h.microgravity.name },
+    get summary() { const h = tr().hazards; return ENV.gravity_g > 0 ? h.partialGravity.summary(ENV.gravity_g) : h.microgravity.summary },
     systems: ['muscle', 'radiation', 'heart'],
     severity: a => worst(a, ['atrophy', 'exercise']),
-    metrics: a => [['Masa muscular', `${a.muscle.delta}%`], ['Cumplimiento ARED', `${a.muscle.exercise_pct}%`]],
+    metrics: a => [[M().muscle, `${a.muscle.delta}%`], [M().ared, `${a.muscle.exercise_pct}%`]],
   },
   {
-    id: 'isolation', name: 'Aislamiento y confinamiento', icon: 'user-focus', effect: 'isolation',
-    summary: 'Meses en un hábitat cerrado y lejos de la Tierra elevan el estrés, la monotonía y el riesgo de depresión.',
+    id: 'isolation', get name() { return tr().hazards.isolation.name }, icon: 'user-focus', effect: 'isolation',
+    get summary() { return tr().hazards.isolation.summary },
     systems: ['psych', 'neuro'],
     severity: a => worst(a, ['voice', 'coherence', 'sensory']),
-    metrics: a => [['Estado', a.psych.mood], ['Privación sensorial', a.psych.sensory]],
+    metrics: a => [[M().state, a.psych.mood], [M().sensory, sensory(a)]],
   },
   {
-    id: 'circadian', name: 'Ritmo circadiano y sueño', icon: 'moon-stars', effect: 'pulse',
-    summary: 'Sin ciclo día-noche natural el sueño se fragmenta y la fatiga degrada los reflejos y la toma de decisiones.',
+    id: 'circadian', get name() { return tr().hazards.circadian.name }, icon: 'moon-stars', effect: 'pulse',
+    get summary() { return tr().hazards.circadian.summary },
     systems: ['neuro', 'psych'],
     severity: a => worst(a, ['sleep', 'lapses', 'reaction']),
-    metrics: a => [['Sueño', `${a.cognitive.sleep} h`], ['Reacción PVT', `${a.cognitive.rt} ms`]],
+    metrics: a => [[M().sleep, `${a.cognitive.sleep} h`], [M().pvt, `${a.cognitive.rt} ms`]],
   },
   {
-    id: 'co2', name: 'Hipercapnia (CO₂ en cabina)', icon: 'cloud-fog', effect: 'haze',
-    summary: 'El CO₂ se acumula en zonas sin convección; causa cefalea, fatiga y menor rendimiento cognitivo.',
+    id: 'co2', get name() { return tr().hazards.co2.name }, icon: 'cloud-fog', effect: 'haze',
+    get summary() { return tr().hazards.co2.summary },
     systems: ['lungs', 'neuro'],
     severity: a => worst(a, ['co2', 'spo2']),
-    metrics: a => [['CO₂ cabina', `${a.environment.co2} mmHg`], ['SpO₂', `${a.vitals.spo2}%`]],
+    metrics: a => [[M().co2, `${a.environment.co2} mmHg`], [M().spo2, `${a.vitals.spo2}%`]],
   },
   {
-    id: 'cardio', name: 'Desacondicionamiento cardiovascular', icon: 'heartbeat', effect: 'pulse',
-    summary: 'El desplazamiento de fluidos hacia la cabeza y la menor exigencia reducen la reserva cardíaca y el tono autonómico.',
+    id: 'cardio', get name() { return tr().hazards.cardio.name }, icon: 'heartbeat', effect: 'pulse',
+    get summary() { return tr().hazards.cardio.summary },
     systems: ['heart', 'lungs'],
     severity: a => worst(a, ['hrv', 'hr']),
-    metrics: a => [['HRV (RMSSD)', `${a.vitals.hrv} ms`], ['Pulso', `${a.vitals.hr} bpm`]],
+    metrics: a => [[M().hrv, `${a.vitals.hrv} ms`], [M().pulse, `${a.vitals.hr} bpm`]],
   },
 ];
 
-// Riesgo del diagnóstico (texto libre del motor clínico) -> sistema. El orden importa.
+// Riesgo del diagnóstico (texto libre del motor clínico, en inglés o español) -> sistema. El orden importa.
 const RISK_RULES: [SystemId, RegExp][] = [
-  ['radiation', /radiaci|SPE|part[ií]culas solares|dosis/i],
-  ['lungs', /CO2|CO₂|hipercapnia|SpO/i],
-  ['muscle', /muscular|ARED|atrofia|treadmill/i],
-  ['heart', /HRV|card[ií]a|cardiovascular|arritmia|neurovegetativo|auton[oó]mic/i],
-  ['psych', /vocal|distr[eé]s|afectiv|emocional|privaci|depresi|burnout|coherencia|ánimo/i],
-  ['neuro', /PVT|fatiga|sueño|psicomotr|cognitiv/i],
+  ['radiation', /radiaci|radiation|SPE|part[ií]culas solares|solar particle|dosis|dose/i],
+  ['lungs', /CO2|CO₂|hipercapnia|hypercapnia|SpO|oxygen/i],
+  ['muscle', /muscular|muscle|ARED|atrofia|atrophy|treadmill/i],
+  ['heart', /HRV|card[ií]a|cardiac|cardiovascular|arritmia|arrhythmia|heart rate|neurovegetativo|auton[oó]mic|blood pressure|presi[oó]n|hiperten|hypertens|hipoten|hypotens/i],
+  ['psych', /vocal|distr[eé]s|distress|afectiv|mood|emocional|emotional|privaci|deprivation|depresi|depress|burnout|coherencia|coherence|ánimo|prosod/i],
+  ['neuro', /PVT|fatiga|fatigue|sueño|sleep|psicomotr|psychomotor|cognitiv|gluc/i],
 ];
 export const systemForRisk = (text: string): SystemId | null => RISK_RULES.find(([, re]) => re.test(text))?.[0] ?? null
 
 export function setEnvironment(env: MissionEnvironment) {
   Object.assign(ENV, { radiation_watch: env.radiation_watch, radiation_spe: env.radiation_spe, co2_max: env.co2_max, gravity_g: env.gravity_g })
-  const g = HAZARDS.find(h => h.id === 'microgravity')!
-  g.name = env.gravity_g > 0 ? `Gravedad parcial (${env.gravity_g} g)` : 'Microgravedad';
-  g.summary = env.gravity_g > 0
-    ? `Con ${env.gravity_g} g la pérdida muscular y ósea es más lenta que en órbita, pero sigue ocurriendo sin ejercicio.`
-    : 'Sin carga gravitacional se pierde masa muscular y densidad ósea (~1-2 % al mes) si no se cumple el ejercicio.';
 }

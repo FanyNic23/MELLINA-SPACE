@@ -9,6 +9,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 
 from app.core.environments import DEFAULT_ENVIRONMENT, ENVIRONMENTS
+from app.core.i18n import tr
 from app.services.clinical_engine import SpaceClinicalEngine
 
 router = APIRouter(prefix="/api/mission", tags=["Entorno de misión"])
@@ -27,7 +28,7 @@ def load_environment(path: str) -> str:
 
 
 def _public(env_id: str) -> dict:
-    return {"id": env_id, **ENVIRONMENTS[env_id]}
+    return {"id": env_id, **{k: tr(*v) if isinstance(v, tuple) else v for k, v in ENVIRONMENTS[env_id].items()}}
 
 
 @router.get("/environment", summary="Entorno activo y entornos disponibles")

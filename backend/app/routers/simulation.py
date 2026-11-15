@@ -9,6 +9,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.core.i18n import tr
 from app.schemas.clinical import HealthStatusReport
 
 router = APIRouter(prefix="/api/sim", tags=["Panel de simulación"])
@@ -33,15 +34,15 @@ class SimValues(BaseModel):
 
 # Crisis predefinidas basadas en los riesgos del NASA Human Research Program.
 SCENARIOS: dict[str, dict] = {
-    "spe": {"name": "Tormenta solar (SPE)",
+    "spe": {"name": ("Tormenta solar (SPE)", "Solar storm (SPE)"),
             "values": {"radiation_rate": 140, "heart_rate": 104, "voice_stress": 0.78}},
-    "co2": {"name": "Fuga de CO₂ en cabina",
+    "co2": {"name": ("Fuga de CO₂ en cabina", "Cabin CO₂ leak"),
             "values": {"co2_mmhg": 7.2, "spo2": 93.5, "reaction_time": 330, "lapses": 2, "sleep_hours": 4.6}},
-    "fatigue": {"name": "Fatiga extrema / insomnio",
+    "fatigue": {"name": ("Fatiga extrema / insomnio", "Extreme fatigue / insomnia"),
                 "values": {"sleep_hours": 3.4, "reaction_time": 430, "lapses": 4, "hrv": 17, "coherence_pct": 50}},
-    "isolation": {"name": "Crisis por aislamiento",
+    "isolation": {"name": ("Crisis por aislamiento", "Isolation crisis"),
                   "values": {"mood_valence": -0.7, "voice_stress": 0.82, "coherence_pct": 42}},
-    "atrophy": {"name": "Atrofia por microgravedad",
+    "atrophy": {"name": ("Atrofia por microgravedad", "Microgravity atrophy"),
                 "values": {"muscle_delta_pct": -7.5, "exercise_pct": 35}},
 }
 
@@ -55,7 +56,7 @@ def _check(request: Request, crew_id: str):
 
 @router.get("/scenarios", summary="Crisis predefinidas disponibles")
 def list_scenarios():
-    return [{"id": k, "name": v["name"], "values": v["values"]} for k, v in SCENARIOS.items()]
+    return [{"id": k, "name": tr(*v["name"]), "values": v["values"]} for k, v in SCENARIOS.items()]
 
 
 @router.post("/{crew_id}", response_model=HealthStatusReport, summary="Aplica valores simulados y reevalúa el SEWS")

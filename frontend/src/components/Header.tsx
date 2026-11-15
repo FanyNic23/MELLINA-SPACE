@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LANGS, setLang, useI18n } from '../i18n'
 import { useMission } from '../state/mission'
 import { BrandMark, BrandWord } from './Brand'
 import { Icon } from './Icon'
@@ -6,9 +7,10 @@ import { Icon } from './Icon'
 const MISSION_DAYS = 210
 const RING = 2 * Math.PI * 16
 
-/** Encabezado: marca, entorno de misión (selector), día de misión, latencia con la Tierra y chequeo diario. */
+/** Encabezado: marca, entorno de misión (selector), día de misión, latencia con la Tierra, idioma y chequeo diario. */
 export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () => void; checkinDue: boolean; checkinSub: string }) {
   const { environment, environments, setEnvironment, current } = useMission()
+  const { t } = useI18n()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const day = current?.missionDay ?? 14
@@ -27,7 +29,7 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
           <span className="h-8 w-px bg-space-600" />
           <div>
             <BrandWord className="h-[13px] text-slate-50" />
-            <p className="mt-1.5 hidden text-[11px] text-slate-400 xl:block">Autonomous Health Assessment &amp; Monitoring System</p>
+            <p className="mt-1.5 hidden text-[11px] text-slate-400 xl:block">{t.header.tagline}</p>
           </div>
         </div>
 
@@ -40,7 +42,7 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
                 <Icon name={environment?.icon ?? 'rocket-launch'} size={18} />
               </span>
               <span className="text-left">
-                <span className="panel-title block">Entorno</span>
+                <span className="panel-title block">{t.header.environment}</span>
                 <span className="mt-1 block font-mono text-[13px] font-bold text-cyan-300">{environment?.short ?? '—'}</span>
                 <span className="mt-0.5 block font-mono text-[10px] text-slate-500">{environment?.gravity_text}</span>
               </span>
@@ -54,7 +56,7 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
                     <span className="grid size-8 place-items-center rounded-[10px] bg-space-800 text-accent"><Icon name={e.icon} /></span>
                     <span className="min-w-0">
                       <b className="block text-[13px] text-white">{e.name}</b>
-                      <small className="block text-[10px] text-slate-400">{e.gravity_text} · Tierra a {e.latency_text}</small>
+                      <small className="block text-[10px] text-slate-400">{e.gravity_text} · {t.header.earthAt(e.latency_text)}</small>
                       <small className="block text-[10px] text-slate-400">{e.evacuation}</small>
                     </span>
                   </button>
@@ -64,7 +66,7 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
           </div>
 
           {/* Día de misión */}
-          <div className="flex items-center gap-2.5" title={`Día ${day} de ${MISSION_DAYS}`}>
+          <div className="flex items-center gap-2.5" title={t.header.dayOf(day, MISSION_DAYS)}>
             <svg className="size-10" viewBox="0 0 40 40" aria-hidden="true">
               <circle cx="20" cy="20" r="16" fill="none" stroke="#18202a" strokeWidth="3" />
               <circle cx="20" cy="20" r="16" fill="none" stroke="#22d3ee" strokeWidth="3" strokeLinecap="round"
@@ -73,15 +75,15 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
               <text x="20" y="24" textAnchor="middle" className="fill-slate-200 font-mono text-[11px] font-bold">{day}</text>
             </svg>
             <div>
-              <div className="panel-title">Día de misión</div>
+              <div className="panel-title">{t.header.missionDay}</div>
               <div className="mt-1 font-mono text-[13px] font-bold text-cyan-300">SOL {String(day).padStart(3, '0')}</div>
-              <div className="mt-0.5 hidden font-mono text-[10px] text-slate-500 xl:block">de {MISSION_DAYS} · {environment?.short.toLowerCase()}</div>
+              <div className="mt-0.5 hidden font-mono text-[10px] text-slate-500 xl:block">{t.header.ofTotal(MISSION_DAYS, environment?.short.toLowerCase() ?? '')}</div>
             </div>
           </div>
 
           {/* Latencia con la Tierra (DTN) */}
           <div>
-            <div className="panel-title">Latencia Tierra · DTN</div>
+            <div className="panel-title">{t.header.latency}</div>
             <div className="my-1 flex items-center gap-2">
               <Icon name="globe-hemisphere-west" className="text-sky-400" />
               <span className="relative h-0.5 w-[84px] overflow-hidden rounded bg-space-600">
@@ -92,17 +94,34 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
             <div className="font-mono text-[13px] font-bold text-sky-400">{environment?.latency_text.split(' (')[0] ?? '—'}</div>
           </div>
 
+          <LanguageSwitch />
+
           {/* Acción principal: chequeo diario */}
           <button type="button" onClick={onCheckin}
             className={`flex items-center gap-2.5 rounded-xl bg-accent px-4 py-2 text-left text-black shadow-[0_10px_30px_rgba(34,211,238,0.35)] transition hover:-translate-y-px hover:bg-cyan-300 ${checkinDue ? 'animate-[cta-due_1.8s_ease-in-out_infinite]' : ''}`}>
             <Icon name="clipboard-text" size={20} />
             <span>
-              <b className="block font-mono text-xs font-extrabold tracking-[0.14em]">CHEQUEO DIARIO</b>
+              <b className="block font-mono text-xs font-extrabold tracking-[0.14em]">{t.header.checkin}</b>
               <small className="mt-0.5 block text-[10px] font-semibold opacity-70">{checkinSub}</small>
             </span>
           </button>
         </div>
       </div>
     </header>
+  )
+}
+
+/** Selector de idioma de toda la interfaz (inglés por defecto); también cambia la voz de Mellina. */
+export function LanguageSwitch() {
+  const { lang, t } = useI18n()
+  return (
+    <div className="flex gap-0.5 rounded-lg bg-space-950 p-1 font-mono text-[11px]" role="radiogroup" aria-label={t.language.label}>
+      {LANGS.map(code => (
+        <button key={code} type="button" role="radio" aria-checked={lang === code} onClick={() => setLang(code)}
+          className={`rounded-md px-2.5 py-1.5 font-bold transition ${lang === code ? 'bg-accent text-black' : 'text-slate-400 hover:text-white'}`}>
+          {t.language[code]}
+        </button>
+      ))}
+    </div>
   )
 }

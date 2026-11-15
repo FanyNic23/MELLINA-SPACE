@@ -14,27 +14,34 @@ import threading
 from datetime import date, timedelta
 from typing import Any, Dict, List, Optional
 
+from app.core.i18n import tr
+
 # Tareas fijas de la rutina: id, título, puntos, icono, cómo se completa (auto = lo detecta el sistema)
+# Textos como pares (es, en): se resuelven al idioma de la petición en state().
 BASE_TASKS = [
-    {"id": "checkin", "title": "Chequeo diario de salud", "points": 30, "icon": "clipboard-text", "kind": "auto",
-     "hint": "Presión, pulso, SpO₂, glucosa, temperatura, sueño y ánimo."},
-    {"id": "pvt", "title": "Test de reflejos (PVT)", "points": 20, "icon": "scan", "kind": "auto",
-     "hint": "3 minutos: detecta fatiga antes de una tarea crítica."},
-    {"id": "breathing", "title": "Respiración guiada 0.1 Hz", "points": 15, "icon": "wind", "kind": "manual",
-     "hint": "5 minutos inhalando 4 s y exhalando 6 s."},
-    {"id": "exercise", "title": "Ejercicio ARED y cinta", "points": 25, "icon": "barbell", "kind": "manual",
-     "hint": "2.5 h de ejercicio resistivo y aeróbico contra la pérdida ósea y muscular."},
-    {"id": "hydration", "title": "Hidratación 2 L", "points": 10, "icon": "drop", "kind": "manual",
-     "hint": "En microgravedad no se siente la sed igual: bebe aunque no la tengas."},
+    {"id": "checkin", "title": ("Chequeo diario de salud", "Daily health check"), "points": 30, "icon": "clipboard-text",
+     "kind": "auto", "hint": ("Presión, pulso, SpO₂, glucosa, temperatura, sueño y ánimo.",
+                              "Blood pressure, pulse, SpO₂, glucose, temperature, sleep and mood.")},
+    {"id": "pvt", "title": ("Test de reflejos (PVT)", "Reflex test (PVT)"), "points": 20, "icon": "scan", "kind": "auto",
+     "hint": ("3 minutos: detecta fatiga antes de una tarea crítica.", "3 minutes: catches fatigue before a critical task.")},
+    {"id": "breathing", "title": ("Respiración guiada 0.1 Hz", "Guided breathing 0.1 Hz"), "points": 15, "icon": "wind",
+     "kind": "manual", "hint": ("5 minutos inhalando 4 s y exhalando 6 s.", "5 minutes: inhale 4 s, exhale 6 s.")},
+    {"id": "exercise", "title": ("Ejercicio ARED y cinta", "ARED and treadmill exercise"), "points": 25, "icon": "barbell",
+     "kind": "manual", "hint": ("2.5 h de ejercicio resistivo y aeróbico contra la pérdida ósea y muscular.",
+                                "2.5 h of resistive and aerobic exercise against bone and muscle loss.")},
+    {"id": "hydration", "title": ("Hidratación 2 L", "Hydration 2 L"), "points": 10, "icon": "drop", "kind": "manual",
+     "hint": ("En microgravedad no se siente la sed igual: bebe aunque no la tengas.",
+              "Thirst feels different in microgravity: drink even if you are not thirsty.")},
 ]
 CM_POINTS = 20
-LEVELS = [(0, "Cadete"), (150, "Tripulante"), (400, "Especialista"), (800, "Oficial de salud"), (1400, "Comandante de salud")]
+LEVELS = [(0, ("Cadete", "Cadet")), (150, ("Tripulante", "Crew member")), (400, ("Especialista", "Specialist")),
+          (800, ("Oficial de salud", "Health officer")), (1400, ("Comandante de salud", "Health commander"))]
 BADGES = {
-    "first_checkin": ("Primera medición", "clipboard-text"),
-    "streak_3": ("Racha de 3 días", "lightning"),
-    "streak_7": ("Semana completa", "rocket-launch"),
-    "full_day": ("Día perfecto", "check-circle"),
-    "cm_5": ("Cumplidor de protocolos", "shield-warning"),
+    "first_checkin": (("Primera medición", "First reading"), "clipboard-text"),
+    "streak_3": (("Racha de 3 días", "3-day streak"), "lightning"),
+    "streak_7": (("Semana completa", "Full week"), "rocket-launch"),
+    "full_day": (("Día perfecto", "Perfect day"), "check-circle"),
+    "cm_5": (("Cumplidor de protocolos", "Protocol keeper"), "shield-warning"),
 }
 
 
@@ -64,7 +71,7 @@ class RoutineStore:
     # ------------------------------------------------------------ tareas
     @staticmethod
     def tasks_for(report) -> List[Dict[str, Any]]:
-        tasks = [dict(t) for t in BASE_TASKS]
+        tasks = [{**t, "title": tr(*t["title"]), "hint": tr(*t["hint"])} for t in BASE_TASKS]
         for cm in report.active_countermeasures:
             if cm.id == "CM-NOM-00":
                 continue
@@ -130,12 +137,12 @@ class RoutineStore:
             "done": len([t for t in tasks if t["done"]]),
             "total": len(tasks),
             "points": m["points"],
-            "level": LEVELS[level_i][1],
+            "level": tr(*LEVELS[level_i][1]),
             "level_floor": LEVELS[level_i][0],
-            "next_level": {"name": nxt[1], "points": nxt[0]} if nxt else None,
+            "next_level": {"name": tr(*nxt[1]), "points": nxt[0]} if nxt else None,
             "streak": streak,
             "checkin_today": "checkin" in done_today,
-            "badges": [{"id": b, "name": BADGES[b][0], "icon": BADGES[b][1], "earned": b in earned} for b in BADGES],
+            "badges": [{"id": b, "name": tr(*BADGES[b][0]), "icon": BADGES[b][1], "earned": b in earned} for b in BADGES],
             "team": {"members": team, "pct": round(sum(x["pct"] for x in team) / max(1, len(team)))},
         }
 

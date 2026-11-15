@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { shortName, STATUS_COLOR, STATUS_LABEL } from '../lib/levels'
+import { useI18n } from '../i18n'
+import { shortName, STATUS_COLOR } from '../lib/levels'
 import { useMission } from '../state/mission'
 import { Icon } from './Icon'
 
@@ -8,6 +9,7 @@ const C = 2 * Math.PI * 42
 /** Mini reloj flotante: datos en vivo del tripulante y acceso a su reloj. */
 export function WatchDock() {
   const { current } = useMission()
+  const { t } = useI18n()
   const [time, setTime] = useState(() => clock())
   useEffect(() => { const t = window.setInterval(() => setTime(clock()), 10_000); return () => window.clearInterval(t) }, [])
   if (!current) return null
@@ -15,7 +17,7 @@ export function WatchDock() {
   const critical = current.status === 'ALERTA_CRITICA'
 
   return (
-    <a href={`#/reloj?crew=${current.id}`} aria-label="Abrir el reloj del tripulante"
+    <a href={`#/reloj?crew=${current.id}`} aria-label={t.watchDock.aria}
       className="mx-2 mt-2 flex items-center gap-5 rounded-2xl bg-space-800 px-[18px] py-6 shadow-[0_10px_30px_rgba(0,0,0,0.45),0_0_34px_rgba(34,211,238,0.10)] transition hover:-translate-y-[3px]">
       <div className="relative size-[150px] flex-none animate-[dock-float_4s_ease-in-out_infinite]">
         <span className="absolute -top-5 left-1/2 h-[34px] w-[44%] -translate-x-1/2 rounded-t-[10px] bg-space-700" />
@@ -43,11 +45,11 @@ export function WatchDock() {
         </div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="panel-title">Reloj del tripulante</div>
+        <div className="panel-title">{t.watchDock.title}</div>
         <div className="mt-2 text-lg font-bold leading-tight text-white">{shortName(current.name)}</div>
-        <div className="mt-1 font-mono text-xs" style={{ color }}>SEWS · {STATUS_LABEL[current.status]}</div>
+        <div className="mt-1 font-mono text-xs" style={{ color }}>SEWS · {t.status[current.status]}</div>
         <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 font-mono text-[11px] font-black tracking-widest text-black shadow-lg shadow-cyan-500/30">
-          <Icon name="watch" /> ABRIR RELOJ
+          <Icon name="watch" /> {t.watchDock.open}
         </div>
       </div>
     </a>

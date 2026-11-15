@@ -5,6 +5,7 @@ La consumen el dashboard y el reloj del tripulante (frontend/, React) y el asist
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from app.core.i18n import name as tr_name, role as tr_role, tr
 from app.schemas.clinical import HealthStatusReport
 from app.services.forecast import HealthForecast
 from app.services.sews_dataset import SewsDataset
@@ -42,7 +43,11 @@ def get_crew_overview(request: Request):
     ids = ds.crew_ids()
     if not ids:
         raise HTTPException(status_code=404, detail="No hay datos de telemetría cargados.")
-    return [{"crew_id": cid, "latest_record": ds.latest(cid), "assessment": ds.report(cid)} for cid in ids]
+    return [{"crew_id": cid, "latest_record": _localized(ds.latest(cid)), "assessment": ds.report(cid)} for cid in ids]
+
+
+def _localized(rec: dict) -> dict:
+    return {**rec, "name": tr_name(rec.get("name", "")), "role": tr_role(rec.get("role", ""))}
 
 
 @router.get("/crew/{crew_id}/assessment", response_model=HealthStatusReport,
@@ -76,11 +81,13 @@ def get_crew_forecast(crew_id: str, request: Request, days: int = 30):
 async def submit_pvt_test(test: PVTSubmission, request: Request):
     fatigue = test.lapses_count >= 2 or test.mean_reaction_time_ms > 350
     if fatigue:
-        evaluation = "Fatiga severa detectada - Contramedida de descanso obligatoria prescrita."
+        evaluation = tr("Fatiga severa detectada - Contramedida de descanso obligatoria prescrita.",
+                        "Severe fatigue detected - mandatory rest countermeasure prescribed.")
     elif test.mean_reaction_time_ms > 280:
-        evaluation = "Alerta leve de retardo psicomotor - Se aconseja fototerapia."
+        evaluation = tr("Alerta leve de retardo psicomotor - Se aconseja fototerapia.",
+                        "Mild psychomotor slowing - light therapy advised.")
     else:
-        evaluation = "Óptimo"
+        evaluation = tr("Óptimo", "Optimal")
     await request.app.state.sync.enqueue(
         "pvt_test", {**test.model_dump(), "evaluation": evaluation},
         Priority.HIGH if fatigue else Priority.NORMAL, test.crew_id)
@@ -95,11 +102,13 @@ async def submit_pvt_test(test: PVTSubmission, request: Request):
 async def submit_mood_checkin(mood: MoodSubmission, request: Request):
     low_mood = mood.quadrant == "exhausted" or mood.valence < -0.4
     if low_mood:
-        intervention = "Recomendada sesión de Terapia Inmersiva Terrestre (Earth VR) y ajuste circadiano."
+        intervention = tr("Recomendada sesión de Terapia Inmersiva Terrestre (Earth VR) y ajuste circadiano.",
+                          "Immersive Earth therapy (Earth VR) session and circadian adjustment recommended.")
     elif mood.quadrant == "anxious":
-        intervention = "Recomendada sesión de 3 minutos de Coherencia Cardíaca 0.1Hz en smartwatch."
+        intervention = tr("Recomendada sesión de 3 minutos de Coherencia Cardíaca 0.1Hz en smartwatch.",
+                          "3-minute 0.1 Hz heart coherence session on the smartwatch recommended.")
     else:
-        intervention = "Ninguna intervención requerida."
+        intervention = tr("Ninguna intervención requerida.", "No intervention required.")
     await request.app.state.sync.enqueue(
         "mood_checkin", {**mood.model_dump(), "intervention": intervention},
         Priority.HIGH if low_mood else Priority.NORMAL, mood.crew_id)
@@ -112,7 +121,8 @@ async def submit_coherence_session(coherence: CoherenceSubmission, request: Requ
     await request.app.state.sync.enqueue(
         "coherence_session", coherence.model_dump(), Priority.NORMAL, coherence.crew_id)
     return {"status": "COHERENCE_SESSION_LOGGED", "coherence_score": coherence.coherence_pct,
-            "autonomic_balance": "Restaura tono parasimpático y modula respuesta de amígdala."}
+            "autonomic_balance": tr("Restaura tono parasimpático y modula respuesta de amígdala.",
+                                   "Restores parasympathetic tone and modulates the amygdala response.")}
 
 
 @router.get("/dtn/status", summary="Enlace Tierra-Espacio: estado, latencia y paquetes en cola")

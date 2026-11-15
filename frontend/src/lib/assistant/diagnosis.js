@@ -2,18 +2,17 @@
  * A-HAMS · Datos y diagnóstico hablado del asistente (español / inglés).
  * Consume el Edge Core local (motor clínico SEWS); no guarda copias propias de los datos.
  * Todo el texto se redacta para ser leído en voz alta (sin siglas ni símbolos de unidades).
- * El motor clínico genera riesgos y contramedidas en español; en inglés se traducen aquí
- * (riesgos por patrón, contramedidas por ID).
+ * El Edge Core redacta riesgos y contramedidas en el idioma pedido (cabecera X-Lang).
  */
 const API_BASE = ''; // mismo origen: el Edge Core sirve esta app
 const ASSISTANT_NAME = 'Mellina';
-let lang = 'es';
+let lang = 'en';
 
 async function getJSON(path, timeoutMs = 1500) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const res = await fetch(API_BASE + path, { signal: ctrl.signal });
+    const res = await fetch(API_BASE + path, { headers: { 'X-Lang': lang }, signal: ctrl.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } finally {
@@ -223,36 +222,27 @@ const ES = {
 };
 
 // ── English ─────────────────────────────────────────────────────────
-const RISKS_EN = [
-  [/^Agotamiento neurovegetativo/, () => 'severe autonomic exhaustion'],
-  [/^Estrés autonómico/, () => 'elevated autonomic stress'],
-  [/^Arritmia/, () => 'arrhythmia or abnormal heart rate in microgravity'],
-  [/^Riesgo elevado de fallo operacional/, () => 'high risk of operational error due to severe psychomotor fatigue'],
-  [/^Fatiga cognitiva/, () => 'mild to moderate cognitive fatigue'],
-  [/^Deprivación aguda de sueño/, () => 'acute sleep deprivation'],
-  [/^Indicador de distrés/, () => 'acute psychological distress detected in your voice biomarker'],
-  [/^Atrofia muscular acelerada \((-?[\d.]+)%/, (m) => `accelerated muscle atrophy, ${num(Math.abs(parseFloat(m[1])), 1)} percent below baseline`],
-  [/^Pérdida moderada de masa muscular/, () => 'moderate muscle mass loss'],
-  [/^Incumplimiento crítico/, () => 'critical non-compliance with the exercise countermeasure protocol'],
-  [/^Evento de Partículas Solares.*?:\s*([\d.]+)/, (m) => `a solar particle event or radiation anomaly, at ${num(parseFloat(m[1]), 1)} microsieverts per hour`],
-  [/^Tasa de radiación cósmica/, () => 'galactic cosmic radiation above the nominal threshold'],
-  [/^Hipercapnia/, () => 'hypercapnia from carbon dioxide buildup in the cabin'],
-];
+function speakableEn(text) {
+  return text
+    .replace(/\s*\([^)]*\)/g, '')
+    .replace(/[μu]Sv\/h/g, 'microsieverts per hour')
+    .replace(/(\d)\s*nm\b/g, '$1 nanometers')
+    .replace(/(\d)\s*%/g, '$1 percent')
+    .replace(/\bHRV\b/g, 'heart rate variability')
+    .replace(/\bPVT\b/g, 'psychomotor vigilance')
+    .replace(/\bon ARED\b/g, 'on the resistance device')
+    .replace(/\bARED\b/g, 'resistance exercise')
+    .replace(/\bSPE\b/g, '')
+    .replace(/\b1RM\b/g, 'of your one-rep max')
+    .replace(/&/g, 'and')
+    .replace(/\s+\/\s+/g, ' or ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
 
-const COUNTERMEASURES_EN = {
-  'CM-RAD-01': ['Radiation storm shelter protocol', 'Move to the central shielded module and start personal dosimetry monitoring'],
-  'CM-COG-02': ['Circadian hygiene and dynamic light therapy', 'Set the cabin lights to 460 nanometers, blue-enriched, during operating hours'],
-  'CM-MUSC-03': ['Intensified resistance exercise protocol', 'Add 3 extra sets of squats and calf raises on the resistance device at 85 percent of your one-rep max, with an eccentric focus'],
-  'CM-PSY-04': ['Psycho-respiratory biofeedback decompression', 'Do an autonomous heart coherence session, breathing at 0.1 hertz, with the immersive nature module in virtual reality'],
-  'CM-NOM-00': ['Nominal spaceflight protocol', 'Keep your standard routine of 2.5 hours of resistance and cardiovascular exercise'],
-};
-
-function riskEn(text) {
-  for (const [re, fn] of RISKS_EN) {
-    const m = text.match(re);
-    if (m) return fn(m);
-  }
-  return 'a risk flagged on the main dashboard';
+function firstStepEn(protocol) {
+  const step = protocol.split('\n')[0].replace(/^\d+\.\s*/, '');
+  return speakableEn(step.split(/(?<=\.)\s/)[0]).replace(/\.$/, '');
 }
 
 const EN = {
@@ -282,15 +272,12 @@ const EN = {
     if (m.musc.delta <= -5) parts.push(`Your muscle mass is down ${num(Math.abs(m.musc.delta), 1)} percent since the start of the mission.`);
     if (m.risks.length) {
       const n = m.risks.length;
-      parts.push(`I detect ${n} ${n === 1 ? 'risk' : 'risks'}. The main one: ${riskEn(m.risks[0])}.`);
+      parts.push(`I detect ${n} ${n === 1 ? 'risk' : 'risks'}. The main one: ${speakableEn(m.risks[0])}.`);
     } else {
       parts.push('All your parameters are within range.');
     }
     const cm = m.countermeasures[0];
-    if (cm) {
-      const [title, step] = COUNTERMEASURES_EN[cm.id] || ['Countermeasure available', 'Check the details on the main dashboard'];
-      parts.push(`${this.urgency[cm.urgency] || ''} recommendation: ${title}. ${step}.`);
-    }
+    if (cm) parts.push(`${this.urgency[cm.urgency] || ''} recommendation: ${speakableEn(cm.title)}. ${firstStepEn(cm.protocol)}.`);
     return parts.join(' ');
   },
 

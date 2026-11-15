@@ -13,6 +13,7 @@ auditable y coherente con la evaluación de hoy. Es una estimación de tendencia
 """
 from typing import Any, Dict, List, Optional
 
+from app.core.i18n import tr
 from app.services.clinical_engine import SpaceClinicalEngine
 from app.services.data_adapter import NASADataAdapter
 
@@ -117,19 +118,27 @@ class HealthForecast:
         crit_untreated, crit_care = first_critical(untreated), first_critical(care)
         sews_end_u, sews_end_c = untreated[-1]["report"]["sews_score"], care[-1]["report"]["sews_score"]
         if crit_untreated == 0:
-            headline = (f"Ya está en nivel crítico. Sin intervención llega a SEWS {sews_end_u} en {days} días; "
-                        f"con las contramedidas baja a {sews_end_c}.")
+            headline = tr(f"Ya está en nivel crítico. Sin intervención llega a SEWS {sews_end_u} en {days} días; "
+                          f"con las contramedidas baja a {sews_end_c}.",
+                          f"Already critical. Without intervention SEWS reaches {sews_end_u} in {days} days; "
+                          f"with countermeasures it drops to {sews_end_c}.")
         elif crit_untreated is not None:
-            headline = (f"Sin intervención alcanzaría nivel crítico en {crit_untreated} días. "
-                        f"Con las contramedidas: SEWS {sews_end_c} al día +{days}.")
+            headline = tr(f"Sin intervención alcanzaría nivel crítico en {crit_untreated} días. "
+                          f"Con las contramedidas: SEWS {sews_end_c} al día +{days}.",
+                          f"Without intervention it would turn critical in {crit_untreated} days. "
+                          f"With countermeasures: SEWS {sews_end_c} on day +{days}.")
         else:
-            headline = (f"Sin riesgo crítico proyectado en {days} días (SEWS {sews_end_u}). "
-                        f"Con las contramedidas: {sews_end_c}.")
+            headline = tr(f"Sin riesgo crítico proyectado en {days} días (SEWS {sews_end_u}). "
+                          f"Con las contramedidas: {sews_end_c}.",
+                          f"No critical risk projected within {days} days (SEWS {sews_end_u}). "
+                          f"With countermeasures: {sews_end_c}.")
         return {
             "crew_id": crew_id, "days": days, "from_mission_day": current["mission_day"],
             "days_to_critical": {"untreated": crit_untreated, "with_countermeasures": crit_care},
             "headline": headline,
             "trajectories": {"untreated": untreated, "with_countermeasures": care},
-            "method": "Tendencia por mínimos cuadrados (últimos 10 días) evaluada día a día con el motor SEWS; "
-                      "recuperación exponencial (vida media 4 días) hacia la línea base personal con contramedidas.",
+            "method": tr("Tendencia por mínimos cuadrados (últimos 10 días) evaluada día a día con el motor SEWS; "
+                         "recuperación exponencial (vida media 4 días) hacia la línea base personal con contramedidas.",
+                         "Least-squares trend (last 10 days) evaluated day by day with the SEWS engine; "
+                         "exponential recovery (4-day half-life) toward the personal baseline with countermeasures."),
         }

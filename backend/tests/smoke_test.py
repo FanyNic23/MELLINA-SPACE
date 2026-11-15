@@ -36,7 +36,7 @@ def wait(fn, timeout=15):
     raise AssertionError("timeout")
 
 
-with TestClient(app) as c:
+with TestClient(app, headers={"X-Lang": "es"}) as c:  # las comprobaciones de texto usan el español
     assert c.get("/health").json()["ok"]
 
     # --- motor clínico SEWS (una sola llamada trae evaluación completa)
@@ -104,6 +104,14 @@ with TestClient(app) as c:
     assert h["offline"] is True and h["stt"]["provider"] == "local"
     assert c.get("/api/assistant/status").status_code == 404  # ya no existe la IA en la nube
 
+    # --- idioma: inglés por defecto, español con X-Lang (o ?lang=)
+    en = c.get(f"/api/crew/{IDS[2]}/assessment", headers={"X-Lang": "en"}).json()
+    es = c.get(f"/api/crew/{IDS[2]}/assessment").json()
+    print("idioma:", en["role"], "|", es["role"], "|", en["active_countermeasures"][0]["title"])
+    assert en["sews_score"] == es["sews_score"] and en["role"] != es["role"]
+    assert c.get("/api/mission/environment?lang=en", headers={"X-Lang": ""}).json()["active"]["short"] != \
+        c.get("/api/mission/environment").json()["active"]["short"]
+
     # --- panel de simulación: datos simulados -> motor clínico al instante
     base = c.get(f"/api/crew/{IDS[0]}/assessment").json()
     r = c.post(f"/api/sim/{IDS[0]}/scenario/spe").json()
@@ -164,7 +172,7 @@ with TestClient(app) as c:
     assert c.post(f"/api/checkin/{IDS[0]}", json={"glucose_mg_dl": 5000}).status_code == 422
 
     # --- voz
-    assert c.post("/api/voice/tts", json={"text": "hola"}).status_code == 404  # la voz la sintetiza el reloj localmente
+    assert c.post("/api/voice/tts", json={"text": "hola"}).status_code in (404, 405)  # sin ruta (la interfaz servida en / responde 405 a POST); la voz la sintetiza el reloj localmente
     assert c.post("/api/voice/stt", files={"audio": ("x.webm", b"", "audio/webm")}).status_code == 400
     assert c.post("/api/voice/stt", files={"audio": ("x.webm", b"basura", "audio/webm")}).status_code == 422
     sample = os.environ.get("SMOKE_AUDIO")  # opcional: un wav/webm con voz para probar Whisper local

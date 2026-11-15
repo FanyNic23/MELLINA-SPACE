@@ -1,4 +1,6 @@
 // Cliente del Edge Core local (mismo origen: FastAPI sirve esta app). Sin servicios externos.
+// Cada petición lleva el idioma activo (X-Lang): el motor clínico responde en ese idioma.
+import { getLang, tr } from '../i18n'
 import type {
   Astronaut, CrewOverviewItem, DtnStatus, Forecast, HealthReport, MissionEnvironment, Routine, SimScenario,
   TelemetryRecord,
@@ -10,11 +12,11 @@ async function request<T>(path: string, init?: RequestInit, timeoutMs = 4000): P
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeoutMs)
   try {
-    const res = await fetch(path, { ...init, signal: ctrl.signal })
+    const res = await fetch(path, { ...init, headers: { ...init?.headers, 'X-Lang': getLang() }, signal: ctrl.signal })
     if (!res.ok) throw new Error(`HTTP ${res.status} en ${path}`)
     return (await res.json()) as T
   } catch (err) {
-    if (err instanceof DOMException || err instanceof TypeError) throw new OfflineError('El Edge Core no responde')
+    if (err instanceof DOMException || err instanceof TypeError) throw new OfflineError('Edge Core unreachable')
     throw err
   } finally {
     clearTimeout(timer)
@@ -39,17 +41,19 @@ const PROFILE: Record<string, { photo: string; initials: string }> = {
 
 /** Cuadrante emocional de Russell a partir de valencia y activación. */
 function moodLabel(valence: number, arousal: number): string {
-  if (valence < -0.4 && arousal < 0) return 'Agotado / Desánimo'
-  if (valence < -0.1 && arousal >= 0.3) return 'Ansioso / Sobrecargado'
-  if (valence < -0.1) return 'Tenso / Bajo ánimo'
-  if (arousal >= 0.3) return 'Alerta / Activado'
-  return 'Calmo / Equilibrado'
+  const m = tr().mood
+  if (valence < -0.4 && arousal < 0) return m.exhausted
+  if (valence < -0.1 && arousal >= 0.3) return m.anxious
+  if (valence < -0.1) return m.tense
+  if (arousal >= 0.3) return m.alert
+  return m.calm
 }
 
 function voiceNote(stress: number): string {
-  if (stress > 0.7) return 'Aplanamiento prosódico y distrés vocal.'
-  if (stress > 0.4) return 'Tensión vocal moderada.'
-  return 'Prosodia y tono acústico balanceado.'
+  const v = tr().voice
+  if (stress > 0.7) return v.high
+  if (stress > 0.4) return v.mid
+  return v.low
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10

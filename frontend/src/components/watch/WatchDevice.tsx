@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { api } from '../../api/client'
 import type { Astronaut, Countermeasure, Urgency } from '../../api/types'
+import { useI18n } from '../../i18n'
 import { beep, haptic } from '../../lib/feedback'
-import { STATUS_COLOR, STATUS_LABEL } from '../../lib/levels'
+import { STATUS_COLOR } from '../../lib/levels'
 import { Icon } from '../Icon'
 import { FACES } from './faces'
 import type { AssistantApi } from './useAssistant'
@@ -11,10 +12,10 @@ import './watch.css'
 
 const URGENCY_RANK: Record<Urgency, number> = { INMEDIATA: 0, ALTA: 1, MODERADA: 2, PREVENTIVA: 3 }
 const MOODS = [
-  { key: 'calm', label: 'Calmo', valence: 0.6, arousal: 0 },
-  { key: 'focused', label: 'Enfocado', valence: 0.4, arousal: 0.5 },
-  { key: 'anxious', label: 'Ansioso', valence: -0.45, arousal: 0.6 },
-  { key: 'exhausted', label: 'Agotado', valence: -0.65, arousal: -0.5 },
+  { key: 'calm', valence: 0.6, arousal: 0 },
+  { key: 'focused', valence: 0.4, arousal: 0.5 },
+  { key: 'anxious', valence: -0.45, arousal: 0.6 },
+  { key: 'exhausted', valence: -0.65, arousal: -0.5 },
 ] as const
 
 /** Cuadrante emocional actual (Russell) para resaltar el check-in de 1 toque. */
@@ -33,6 +34,7 @@ export function WatchDevice({ astro, panel, setPanel, round, assistant, onChange
   const [drag, setDrag] = useState<{ x: number; dx: number; t: number } | null>(null)
   const moved = useRef(0)
   const [toast, setToast] = useState(false)
+  const { t } = useI18n()
   const n = FACES.length
 
   const down = (e: RPointerEvent) => {
@@ -94,15 +96,15 @@ export function WatchDevice({ astro, panel, setPanel, round, assistant, onChange
           </div>
           <div className="flex items-center justify-center gap-1.5 pb-[10%] pt-1">
             {FACES.map((f, i) => (
-              <button key={f.name} type="button" aria-label={f.name} onClick={() => setPanel(i)}
+              <button key={f.icon} type="button" aria-label={t.watch.faceList[i].name} onClick={() => setPanel(i)}
                 className={`h-1 rounded-full transition-all ${i === panel ? 'w-6 bg-accent' : 'w-3 bg-space-600'}`} />
             ))}
           </div>
           <div className={`watch-toast ${toast ? 'is-on' : ''}`}>
             <div className="px-[18%] text-center">
               <Icon name="check-circle" size={40} className="mx-auto text-nominal" />
-              <div className="mt-2 text-sm font-bold text-white">Protocolo registrado</div>
-              <div className="mt-1 text-[10px] text-slate-400">Guardado en la rutina y enviado al hábitat.</div>
+              <div className="mt-2 text-sm font-bold text-white">{t.watch.protocolSaved}</div>
+              <div className="mt-1 text-[10px] text-slate-400">{t.watch.protocolSavedSub}</div>
             </div>
           </div>
         </div>
@@ -129,6 +131,7 @@ function clock() {
 }
 
 function VitalsFace({ astro }: { astro: Astronaut }) {
+  const { t } = useI18n()
   const color = STATUS_COLOR[astro.status]
   const critical = astro.status === 'ALERTA_CRITICA'
   return (
@@ -143,11 +146,11 @@ function VitalsFace({ astro }: { astro: Astronaut }) {
         <div className="absolute flex flex-col items-center">
           <span className="w-label">SEWS</span>
           <span className={`mt-1 text-3xl font-black leading-none ${critical ? 'is-critical' : ''}`} style={{ color }}>{String(astro.sews).padStart(2, '0')}</span>
-          <span className={`mt-1 text-[9px] font-bold tracking-wider ${critical ? 'is-critical' : ''}`} style={{ color }}>{STATUS_LABEL[astro.status]}</span>
+          <span className={`mt-1 text-[9px] font-bold tracking-wider ${critical ? 'is-critical' : ''}`} style={{ color }}>{t.status[astro.status]}</span>
         </div>
       </div>
       <div className="pointer-events-none grid w-full grid-cols-3 gap-1.5">
-        {[['PULSO', `${astro.vitals.hr} bpm`, 'text-cyan-300'], ['HRV', `${astro.vitals.hrv} ms`, 'text-slate-100'], ['RAD', `${astro.environment.radiation} μSv`, 'text-slate-100']].map(([k, v, c]) => (
+        {[[t.watch.pulse, `${astro.vitals.hr} bpm`, 'text-cyan-300'], ['HRV', `${astro.vitals.hrv} ms`, 'text-slate-100'], ['RAD', `${astro.environment.radiation} μSv`, 'text-slate-100']].map(([k, v, c]) => (
           <div key={k} className="w-tile py-1.5 text-center"><div className="w-label">{k}</div><div className={`mt-1 text-xs font-bold ${c}`}>{v}</div></div>
         ))}
       </div>
@@ -156,20 +159,22 @@ function VitalsFace({ astro }: { astro: Astronaut }) {
 }
 
 function CountermeasureFace({ cm, color, onConfirm }: { cm?: Countermeasure; color: string; onConfirm: () => void }) {
+  const { t } = useI18n()
   return (
     <div className="carousel-panel gap-2 text-center">
-      <span className="w-label" style={{ color: cm?.urgency === 'INMEDIATA' ? color : undefined }}>CONTRAMEDIDA · {cm?.urgency ?? 'PREVENTIVA'}</span>
-      <h3 className="text-sm font-bold leading-tight text-white">{cm?.title ?? 'Sin contramedidas activas'}</h3>
-      <p className="line-clamp-3 text-[10px] leading-snug text-slate-300">{cm ? cm.action_protocol.split('\n')[0].replace(/^1\.\s*/, '') : 'Biomarcadores en rango.'}</p>
+      <span className="w-label" style={{ color: cm?.urgency === 'INMEDIATA' ? color : undefined }}>{t.watch.countermeasure(t.urgency[cm?.urgency ?? 'PREVENTIVA'])}</span>
+      <h3 className="text-sm font-bold leading-tight text-white">{cm?.title ?? t.watch.noCountermeasures}</h3>
+      <p className="line-clamp-3 text-[10px] leading-snug text-slate-300">{cm ? cm.action_protocol.split('\n')[0].replace(/^1\.\s*/, '') : t.watch.inRange}</p>
       <button type="button" onClick={onConfirm}
         className="w-full rounded-full bg-accent py-2 font-mono text-[11px] font-black uppercase tracking-wide text-black shadow-lg shadow-cyan-500/20 transition active:scale-95 hover:bg-cyan-300">
-        Confirmar y ejecutar
+        {t.watch.confirm}
       </button>
     </div>
   )
 }
 
 function MindFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => void }) {
+  const { watch: t } = useI18n().t
   const [mood, setMood] = useState(() => moodKey(astro))
   const [breathing, setBreathing] = useState(false)
   const [phase, setPhase] = useState(0)
@@ -195,23 +200,23 @@ function MindFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => voi
 
   return (
     <div className="carousel-panel gap-2">
-      <div className="w-label flex items-center gap-1"><Icon name="brain" size={12} className="text-accent" /> CHECK-IN EMOCIONAL</div>
+      <div className="w-label flex items-center gap-1"><Icon name="brain" size={12} className="text-accent" /> {t.moodCheckin}</div>
       <div className="grid w-full grid-cols-2 gap-1">
         {MOODS.map(m => (
           <button key={m.key} type="button" onClick={() => pick(m)}
             className={`rounded-lg py-1.5 text-[10px] font-semibold transition ${mood === m.key ? 'bg-accent text-black' : 'bg-space-800 text-slate-300 hover:bg-space-700'}`}>
-            {m.label}
+            {t.moods[m.key]}
           </button>
         ))}
       </div>
       <div className="w-tile flex w-full items-center gap-2 p-2">
         <div className={`flex size-11 flex-shrink-0 items-center justify-center rounded-full bg-accent text-[8px] font-bold text-black ${breathing ? 'orb-breathing' : ''}`}>0.1Hz</div>
         <div className="min-w-0 flex-1 text-left">
-          <div className="truncate text-[10px] font-bold text-white">{breathing ? (phase === 0 ? 'Inhala profundamente' : 'Exhala lentamente') : 'Coherencia cardíaca'}</div>
-          <div className="truncate text-[9px] text-slate-400">{breathing ? (phase === 0 ? 'Expansión torácica · 4 s' : 'Relaja cuello y hombros · 6 s') : 'Inhala 4 s · exhala 6 s'}</div>
-          <div className="font-mono text-[9px] text-cyan-300">Coherencia {astro.psych.coherence}%</div>
+          <div className="truncate text-[10px] font-bold text-white">{breathing ? (phase === 0 ? t.inhale : t.exhale) : t.coherenceTitle}</div>
+          <div className="truncate text-[9px] text-slate-400">{breathing ? (phase === 0 ? t.inhaleSub : t.exhaleSub) : t.coherenceSub}</div>
+          <div className="font-mono text-[9px] text-cyan-300">{t.coherence(astro.psych.coherence)}</div>
         </div>
-        <button type="button" onClick={toggle} aria-label={breathing ? 'Terminar respiración' : 'Iniciar respiración'}
+        <button type="button" onClick={toggle} aria-label={breathing ? t.breathStop : t.breathStart}
           className={`grid size-8 flex-none place-items-center rounded-full text-black active:scale-95 ${breathing ? 'bg-slate-100' : 'bg-accent'}`}>
           <Icon name={breathing ? 'stop' : 'play'} />
         </button>
@@ -221,6 +226,7 @@ function MindFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => voi
 }
 
 function PvtFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => void }) {
+  const { watch: t } = useI18n().t
   const [state, setState] = useState<'idle' | 'waiting' | 'ready' | 'done' | 'early'>('idle')
   const [rt, setRt] = useState(0)
   const start = useRef(0)
@@ -251,20 +257,20 @@ function PvtFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => void
 
   return (
     <div className="carousel-panel gap-2">
-      <div className="w-label flex items-center gap-1"><Icon name="scan" size={12} className="text-accent" /> TEST DE VIGILANCIA</div>
+      <div className="w-label flex items-center gap-1"><Icon name="scan" size={12} className="text-accent" /> {t.pvtTitle}</div>
       <button type="button" onClick={tap} className={`flex h-24 w-full flex-col items-center justify-center rounded-2xl transition-colors ${bg}`}>
-        {state === 'idle' && <span className="px-2 text-center font-mono text-[11px] text-slate-400">Toca Iniciar</span>}
-        {state === 'waiting' && <span className="font-mono text-[11px] font-bold text-sky-400">Espera el estímulo</span>}
-        {state === 'ready' && <span className="font-mono text-base font-black text-black">¡TOCA YA!</span>}
-        {state === 'early' && <span className="font-mono text-[10px] text-white">Antes de tiempo · repite</span>}
+        {state === 'idle' && <span className="px-2 text-center font-mono text-[11px] text-slate-400">{t.pvtIdle}</span>}
+        {state === 'waiting' && <span className="font-mono text-[11px] font-bold text-sky-400">{t.pvtWaiting}</span>}
+        {state === 'ready' && <span className="font-mono text-base font-black text-black">{t.pvtReady}</span>}
+        {state === 'early' && <span className="font-mono text-[10px] text-white">{t.pvtEarly}</span>}
         {state === 'done' && <>
-          <span className={`font-mono text-[10px] ${ok ? 'text-nominal' : 'text-red-400'}`}>{ok ? 'Reflejos óptimos' : 'Fatiga detectada'}</span>
+          <span className={`font-mono text-[10px] ${ok ? 'text-nominal' : 'text-red-400'}`}>{ok ? t.pvtOk : t.pvtFatigue}</span>
           <span className={`font-mono text-2xl font-black ${ok ? 'text-nominal' : 'is-critical text-red-400'}`}>{rt} ms</span>
         </>}
       </button>
       {(state === 'idle' || state === 'done' || state === 'early') && (
         <button type="button" onClick={begin} className="w-full rounded-full bg-space-700 py-1.5 font-mono text-[10px] font-bold uppercase text-cyan-300 active:scale-95 hover:bg-space-600">
-          Iniciar test
+          {t.pvtStart}
         </button>
       )}
     </div>
@@ -273,8 +279,9 @@ function PvtFace({ astro, onChanged }: { astro: Astronaut; onChanged: () => void
 
 function AssistantFace({ assistant, moved }: { assistant: AssistantApi; moved: React.RefObject<number> }) {
   const { attachCanvas, caption, micReady, listening, speaking, tap, talk, lookAt } = assistant
+  const { watch: t } = useI18n().t
   return (
-    <div className="carousel-panel" role="button" tabIndex={0} aria-label="Hablar con Mellina"
+    <div className="carousel-panel" role="button" tabIndex={0} aria-label={t.talk}
       onClick={e => { if (moved.current < 10 && !(e.target as HTMLElement).closest('.assist-mic')) tap() }}
       onPointerMove={e => {
         const r = e.currentTarget.getBoundingClientRect()
@@ -283,8 +290,8 @@ function AssistantFace({ assistant, moved }: { assistant: AssistantApi; moved: R
       onPointerLeave={() => lookAt(0, 0)}>
       <canvas ref={attachCanvas} className="assist-canvas" />
       <div className="assist-caption" aria-live="polite">{caption}</div>
-      <button type="button" aria-label="Hablar por micrófono" disabled={!micReady}
-        title={micReady ? '' : 'Inicia el Edge Core para usar el micrófono (Whisper local).'}
+      <button type="button" aria-label={t.mic} disabled={!micReady}
+        title={micReady ? '' : t.micOff}
         className={`assist-mic ${listening ? 'listening' : ''} ${speaking ? 'speaking' : ''}`}
         onClick={e => { e.stopPropagation(); void talk() }}>
         <Icon name="microphone" size={20} />

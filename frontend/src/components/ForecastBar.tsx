@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, toAstronaut } from '../api/client'
 import type { Forecast, ForecastScenario } from '../api/types'
-import { STATUS_COLOR, STATUS_LABEL } from '../lib/levels'
+import { useI18n } from '../i18n'
+import { STATUS_COLOR } from '../lib/levels'
 import { useBody } from '../state/body'
 import { useMission } from '../state/mission'
 import { Icon } from './Icon'
@@ -15,6 +16,7 @@ export function ForecastBar() {
   const { current, version } = useMission()
   const crewId = current?.id
   const { setProjection } = useBody()
+  const { t } = useI18n()
   const [forecast, setForecast] = useState<Forecast | null>(null)
   const [scenario, setScenario] = useState<ForecastScenario>('untreated')
   const [day, setDay] = useState(0)
@@ -57,24 +59,24 @@ export function ForecastBar() {
   return (
     <div className={`absolute bottom-3.5 left-1/2 z-[5] w-[min(560px,calc(100%-28px))] -translate-x-1/2 rounded-2xl bg-space-900/95 px-3.5 py-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.55)] ${day > 0 ? 'ring-2 ring-accent/45' : ''}`}>
       <div className="flex items-center gap-2">
-        <button type="button" aria-label={playing ? 'Detener proyección' : 'Reproducir proyección'}
+        <button type="button" aria-label={playing ? t.forecast.stop : t.forecast.play}
           onClick={() => { if (!playing && day >= DAYS) setDay(0); setPlaying(p => !p) }}
           className="grid size-8 flex-none place-items-center rounded-[10px] bg-accent text-black">
           <Icon name={playing ? 'stop' : 'play'} />
         </button>
         <div className="min-w-0 flex-1">
-          <div className="panel-title">Anticipa · Gemelo digital</div>
+          <div className="panel-title">{t.forecast.title}</div>
           <div className="mt-1 truncate font-mono text-xs font-bold text-slate-200">
-            {day === 0 ? 'HOY' : `SOL ${String(point.mission_day).padStart(3, '0')} (+${day})`}
+            {day === 0 ? t.forecast.today : `SOL ${String(point.mission_day).padStart(3, '0')} (+${day})`}
             {day === 0 && ` · SOL ${String(point.mission_day).padStart(3, '0')}`} · SEWS{' '}
-            <b style={{ color }} className={r.status_label === 'ALERTA_CRITICA' ? 'is-critical' : ''}>{r.sews_score} {STATUS_LABEL[r.status_label]}</b>
+            <b style={{ color }} className={r.status_label === 'ALERTA_CRITICA' ? 'is-critical' : ''}>{r.sews_score} {t.status[r.status_label]}</b>
           </div>
         </div>
-        <div className="flex flex-none gap-0.5 rounded-lg bg-space-950 p-0.5" role="group" aria-label="Escenario">
+        <div className="flex flex-none gap-0.5 rounded-lg bg-space-950 p-0.5" role="group" aria-label={t.forecast.scenario}>
           {(['untreated', 'with_countermeasures'] as const).map(k => (
             <button key={k} type="button" onClick={() => setScenario(k)}
               className={`rounded-md px-2 py-1 font-mono text-[9px] font-bold tracking-wide ${scenario === k ? 'bg-space-700 text-white' : 'text-slate-500'}`}>
-              {k === 'untreated' ? 'SIN INTERVENCIÓN' : 'CON CONTRAMEDIDAS'}
+              {k === 'untreated' ? t.forecast.untreated : t.forecast.withCm}
             </button>
           ))}
         </div>
@@ -89,10 +91,10 @@ export function ForecastBar() {
         ))}
         <line x1={day / DAYS * 300} x2={day / DAYS * 300} y1="0" y2="44" stroke="#22d3ee" strokeWidth="1.5" />
       </svg>
-      <input type="range" min={0} max={DAYS} value={day} aria-label="Días hacia el futuro"
+      <input type="range" min={0} max={DAYS} value={day} aria-label={t.forecast.daysAhead}
         onChange={e => { setPlaying(false); setDay(+e.target.value) }} className="fc-range mt-0.5 w-full" />
       <div className="mt-1 flex justify-between font-mono text-[8px] font-semibold tracking-widest text-slate-600">
-        <span>HOY</span><span>+7</span><span>+14</span><span>+21</span><span>+30 DÍAS</span>
+        <span>{t.forecast.today}</span><span>+7</span><span>+14</span><span>+21</span><span>{t.forecast.endLabel}</span>
       </div>
       <div className="mt-1.5 text-[11px] leading-snug text-slate-300">{forecast.headline}</div>
     </div>

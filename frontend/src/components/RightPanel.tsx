@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useI18n } from '../i18n'
 import { useBody } from '../state/body'
 import { useMission } from '../state/mission'
 import { ClinicalTab } from './tabs/ClinicalTab'
@@ -9,18 +10,19 @@ import { SegBar } from './SegBar'
 import { WatchDock } from './WatchDock'
 
 export type TabId = 'hazards' | 'systems' | 'clinical' | 'routine' | 'sim'
-const TABS: [TabId, string][] = [['hazards', 'AMENAZAS'], ['systems', 'SISTEMAS'], ['clinical', 'CLÍNICO'], ['routine', 'RUTINA'], ['sim', 'SIMULAR']]
+const TABS: TabId[] = ['hazards', 'systems', 'clinical', 'routine', 'sim']
 
 /** Panel derecho: mini reloj arriba y pestañas (amenazas por defecto). */
 export function RightPanel({ tab, onTab, onCheckin }: { tab: TabId; onTab: (t: TabId) => void; onCheckin: () => void }) {
+  const { t } = useI18n()
   return (
     <aside className="card flex min-h-0 flex-col lg:h-full">
       <WatchDock />
       <div className="m-2 grid grid-cols-5 gap-1 rounded-lg bg-space-950 p-1.5 font-mono text-[10px]" role="tablist">
-        {TABS.map(([id, label]) => (
+        {TABS.map(id => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => onTab(id)}
             className={`rounded-md py-1.5 transition ${tab === id ? 'bg-accent font-bold text-black' : 'text-slate-400 hover:text-white'}`}>
-            {label}
+            {t.tabs[id]}
           </button>
         ))}
       </div>

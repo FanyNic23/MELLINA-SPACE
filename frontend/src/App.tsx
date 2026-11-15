@@ -7,6 +7,7 @@ import { Header } from './components/Header'
 import { Icon } from './components/Icon'
 import { RightPanel, type TabId } from './components/RightPanel'
 import { WatchApp } from './components/watch/WatchApp'
+import { useI18n } from './i18n'
 import { useHashRoute } from './lib/route'
 import { BodyProvider } from './state/body'
 import { useMission } from './state/mission'
@@ -15,6 +16,7 @@ import { useMission } from './state/mission'
 export default function App() {
   const { offline, current, environment, refresh, version } = useMission()
   const route = useHashRoute()
+  const { t } = useI18n()
   const [tab, setTab] = useState<TabId>('hazards')
   const [checkin, setCheckin] = useState(false)
   const [checkinToday, setCheckinToday] = useState(true)
@@ -27,16 +29,16 @@ export default function App() {
   }, [crewId, version])
 
   const checkinSub = current?.checkinAt
-    ? `Último: ${new Date(current.checkinAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`
-    : 'Mídete · entiende · actúa'
+    ? t.app.lastCheckin(new Date(current.checkinAt).toLocaleTimeString(t.locale, { hour: '2-digit', minute: '2-digit' }))
+    : t.app.checkinTagline
 
   const offlineOverlay = (offline || !current) && (
     <div className="fixed inset-0 z-[90] grid place-items-center bg-space-950/90">
       <div className="rounded-[18px] bg-space-900 px-9 py-8 text-center shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
         <Icon name="cpu" size={40} className="mx-auto text-accent" />
-        <div className="mt-3 text-lg font-bold text-white">Conectando con el Edge Core…</div>
+        <div className="mt-3 text-lg font-bold text-white">{t.app.connecting}</div>
         <p className="mt-2 max-w-sm text-sm text-slate-400">
-          El servidor local de la nave no responde. Inícialo con <code className="text-cyan-300">python backend/run.py</code>; esta pantalla se actualiza sola.
+          {t.app.offlineBefore} <code className="text-cyan-300">make run</code>{t.app.offlineAfter}
         </p>
       </div>
     </div>

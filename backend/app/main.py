@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core import i18n
 from app.core.crew import CREW
 from app.core.environments import ENVIRONMENTS
 from app.core.db import SessionFactory, get_session, init_models
@@ -78,6 +79,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_methods=["*"], allow_headers=["*"])
+
+
+@app.middleware("http")
+async def language(request: Request, call_next):
+    """Idioma de la respuesta: cabecera X-Lang (o ?lang=), inglés por defecto."""
+    token = i18n.set_lang(request.headers.get("x-lang") or request.query_params.get("lang"))
+    try:
+        return await call_next(request)
+    finally:
+        i18n.reset_lang(token)
 app.include_router(clinical.router)
 app.include_router(simulation.router)
 app.include_router(checkin.router)
