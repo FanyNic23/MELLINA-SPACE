@@ -22,7 +22,9 @@ export default function App() {
   const [checkin, setCheckin] = useState(false)
   const [checkinToday, setCheckinToday] = useState(true)
   const [intro, setIntro] = useState(true)
+  const [revealed, setRevealed] = useState(false) // el logo empezó a disolverse: entra la cámara del cuerpo
   const endIntro = useCallback(() => setIntro(false), [])
+  const reveal = useCallback(() => setRevealed(true), [])
   const openCheckin = () => setCheckin(true)
   const crewId = current?.id
 
@@ -55,7 +57,7 @@ export default function App() {
       <main className="gap-3 space-y-3 p-3 lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_360px] lg:space-y-0 xl:grid-cols-[340px_minmax(0,1fr)_380px]">
         <CrewPanel />
         <BodyProvider>
-          <BodyViewer />
+          <BodyViewer revealed={revealed || !intro} />
           <RightPanel tab={tab} onTab={setTab} onCheckin={openCheckin} />
         </BodyProvider>
       </main>
@@ -65,7 +67,7 @@ export default function App() {
       )}
 
       {offlineOverlay}
-      {intro && <Splash onDone={endIntro} />}
+      {intro && <Splash onExit={reveal} onDone={endIntro} />}
     </div>
   )
 }

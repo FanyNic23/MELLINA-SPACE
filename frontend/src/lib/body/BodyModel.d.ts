@@ -28,5 +28,9 @@ export class BodyModel {
   focusSystem(id: SystemId): void
   showHazard(id: string): void
   reset(): void
+  /** Entrada: deja la cámara muy cerca del cuerpo hasta playIntro(). */
+  holdIntro(): void
+  /** Entrada: aleja la cámara girando hasta la vista general. */
+  playIntro(): void
   dispose(): void
 }

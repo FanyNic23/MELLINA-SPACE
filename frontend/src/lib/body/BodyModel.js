@@ -39,6 +39,7 @@ const LOOK = {
 
 const OVERVIEW = { target: new THREE.Vector3(0, 0.86, 0), dist: 3.75, el: 0.01 };
 const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeOut = t => 1 - Math.pow(1 - t, 3); // arranca rápido y frena suave (entrada de cámara)
 
 /** Descarga (una vez) el modelo anatómico empaquetado: manifiesto + geometría binaria cuantizada. */
 let anatomyPromise = null;
@@ -331,6 +332,22 @@ export class BodyModel {
     this.onChange({ mode: this.mode, id });
   }
 
+  /** Entrada: la cámara espera muy cerca del pecho hasta que se llama a playIntro(). */
+  holdIntro() {
+    this.introHeld = true;
+    this.tween = null;
+    Object.assign(this.view, { target: new THREE.Vector3(0, 1.3, 0), dist: 0.6, az: this.view.az - 0.8, el: 0.14,
+      shift: this._shiftFor(false), lift: 0 });
+  }
+
+  /** Entrada: se aleja girando hasta la vista general del cuerpo completo. */
+  playIntro() {
+    if (!this.introHeld) return;
+    this.introHeld = false;
+    this._tweenView({ target: OVERVIEW.target.clone(), dist: OVERVIEW.dist, el: OVERVIEW.el, shift: this._shiftFor(false),
+      lift: 0, az: this.view.az + 0.8 }, 3200, easeOut);
+  }
+
   reset() {
     this.mode = null; this.activeId = null; this.effect = null;
     this.focusSet = new Set();
@@ -369,10 +386,10 @@ export class BodyModel {
     return 1 - (left + w - right) / w;
   }
 
-  _tweenView(to) {
+  _tweenView(to, dur = 1400, easing = ease) {
     const from = { target: this.view.target.clone(), dist: this.view.dist, az: this.view.az, el: this.view.el,
       shift: this.view.shift, lift: this.view.lift };
-    this.tween = { from, to, t0: performance.now(), dur: this.reduceMotion ? 1 : 1400 };
+    this.tween = { from, to, t0: performance.now(), dur: this.reduceMotion ? 1 : dur, easing };
     this.lastInteraction = performance.now();
   }
 
@@ -601,8 +618,8 @@ export class BodyModel {
 
   _updateCamera(now) {
     if (this.tween) {
-      const { from, to, t0, dur } = this.tween;
-      const k = ease(Math.min(1, (now - t0) / dur));
+      const { from, to, t0, dur, easing } = this.tween;
+      const k = easing(Math.min(1, (now - t0) / dur));
       this.view.target.lerpVectors(from.target, to.target, k);
       for (const key of ['dist', 'az', 'el', 'shift', 'lift']) this.view[key] = from[key] + (to[key] - from[key]) * k;
       if (k >= 1) this.tween = null;

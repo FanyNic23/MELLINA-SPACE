@@ -26,7 +26,8 @@ function markParts(d: string) {
  * anatomía 3D, Edge Core y entorno); al estar listo, el logo se disuelve hacia el dashboard.
  * Se salta con un clic o una tecla.
  */
-export function Splash({ onDone }: { onDone: () => void }) {
+/** onExit avisa cuando el logo empieza a disolverse; onDone, cuando ya desapareció. */
+export function Splash({ onExit, onDone }: { onExit?: () => void; onDone: () => void }) {
   const { crew, environment, offline } = useMission()
   const mark = useMemo(() => vector(markRaw), [])
   const word = useMemo(() => vector(wordRaw), [])
@@ -53,8 +54,9 @@ export function Splash({ onDone }: { onDone: () => void }) {
     if (finished.current) return
     finished.current = true
     setExiting(true)
+    onExit?.()
     window.setTimeout(onDone, EXIT_MS)
-  }, [onDone])
+  }, [onExit, onDone])
 
   useEffect(() => {
     if (offline) onDone() // sin Edge Core manda el aviso de conexión, no la intro
