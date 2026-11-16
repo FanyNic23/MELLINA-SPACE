@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { api } from './api/client'
 import { BodyViewer } from './components/BodyViewer'
 import { CheckinWizard } from './components/CheckinWizard'
@@ -6,6 +6,7 @@ import { CrewPanel } from './components/CrewPanel'
 import { Header } from './components/Header'
 import { Icon } from './components/Icon'
 import { RightPanel, type TabId } from './components/RightPanel'
+import { Splash } from './components/Splash'
 import { WatchApp } from './components/watch/WatchApp'
 import { useI18n } from './i18n'
 import { useHashRoute } from './lib/route'
@@ -20,6 +21,8 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('hazards')
   const [checkin, setCheckin] = useState(false)
   const [checkinToday, setCheckinToday] = useState(true)
+  const [intro, setIntro] = useState(true)
+  const endIntro = useCallback(() => setIntro(false), [])
   const openCheckin = () => setCheckin(true)
   const crewId = current?.id
 
@@ -62,6 +65,7 @@ export default function App() {
       )}
 
       {offlineOverlay}
+      {intro && <Splash onDone={endIntro} />}
     </div>
   )
 }

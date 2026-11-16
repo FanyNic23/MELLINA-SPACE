@@ -1,5 +1,5 @@
 import {
-  ArrowCounterClockwise, ArrowRight, Barbell, Bed, Brain, Broadcast, Camera, CheckCircle, ClipboardText, CloudFog,
+  ArrowCounterClockwise, ArrowRight, Barbell, Bed, Brain, Broadcast, Camera, CheckCircle, CircleNotch, ClipboardText, CloudFog,
   CornersIn, CornersOut, Cpu, Crosshair, Drop, Fire, Gauge, GlobeHemisphereWest, Heartbeat, Lightning, Medal,
   Microphone, MoonStars, PaperPlaneTilt, Planet, Play, Pulse, Radioactive, Robot, RocketLaunch, Scan, ShieldWarning,
   SlidersHorizontal, Smiley, SmileyMeh, SmileyNervous, SmileySad, Star, Stethoscope, Stop, Thermometer, TreeEvergreen,
@@ -9,7 +9,7 @@ import {
 // Iconos sólidos (Phosphor "fill", MIT), empaquetados localmente. Nunca emojis.
 const ICONS: Record<string, PhosphorIcon> = {
   'arrow-counter-clockwise': ArrowCounterClockwise, 'arrow-right': ArrowRight, barbell: Barbell, bed: Bed, brain: Brain,
-  broadcast: Broadcast, camera: Camera, 'check-circle': CheckCircle, 'clipboard-text': ClipboardText, 'cloud-fog': CloudFog,
+  broadcast: Broadcast, camera: Camera, 'check-circle': CheckCircle, 'circle-notch': CircleNotch, 'clipboard-text': ClipboardText, 'cloud-fog': CloudFog,
   'corners-in': CornersIn, 'corners-out': CornersOut, cpu: Cpu, crosshair: Crosshair, drop: Drop, fire: Fire, gauge: Gauge,
   'globe-hemisphere-west': GlobeHemisphereWest, heartbeat: Heartbeat, lightning: Lightning, medal: Medal,
   microphone: Microphone, 'moon-stars': MoonStars, 'paper-plane-tilt': PaperPlaneTilt, planet: Planet, play: Play,
