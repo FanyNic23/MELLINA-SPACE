@@ -128,13 +128,15 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
       }
       const intent = D.intentFrom(said, mission.current.crew)
       if (intent.member && intent.member.id !== current?.id) onSelectCrew(intent.member.id)
+      const m = member()
       if (intent.type === 'select' && intent.member) void say(D.greeting(intent.member))
       else if (intent.type === 'stop') voice.current?.stop()
+      else if (intent.type === 'chat' && intent.key && m) void say(D.chat(intent.key, intent.member ?? m))
       else void answer(intent.type as Topic)
     } catch (err) {
       setCaption((err as Error).name === 'NotAllowedError' ? t.micPermission : t.voiceFailed)
     }
-  }, [answer, current, onSelectCrew, say, lang, t])
+  }, [answer, current, member, onSelectCrew, say, lang, t])
 
   const lookAt = useCallback((x: number, y: number) => avatar.current?.lookAt(x, y), [])
   const stop = useCallback(() => voice.current?.stop(), [])

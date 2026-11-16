@@ -25,10 +25,11 @@ async def _read_audio(audio: UploadFile) -> bytes:
 
 
 @router.post("/api/voice/stt", summary="Transcribe la orden de voz del astronauta")
-async def speech_to_text(request: Request, audio: UploadFile = File(...), language: str | None = None):
+async def speech_to_text(request: Request, audio: UploadFile = File(...), language: str | None = None,
+                         prefer: str | None = None):
     data = await _read_audio(audio)
     try:
-        transcript = await request.app.state.stt.transcribe(data, language)
+        transcript = await request.app.state.stt.transcribe(data, language, prefer)
     except InvalidAudio as exc:
         raise HTTPException(422, str(exc))
     except SpeechUnavailable as exc:

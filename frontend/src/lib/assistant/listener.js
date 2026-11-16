@@ -135,7 +135,7 @@ export class VoiceListener {
     const ext = type.includes('mp4') ? 'mp4' : type.includes('ogg') ? 'ogg' : 'webm';
     const form = new FormData();
     form.append('audio', new Blob(chunks, { type }), `orden.${ext}`);
-    const res = await fetch(`${STT_CONFIG.endpoint}?language=${STT_CONFIG.language}`, { method: 'POST', body: form });
+    const res = await fetch(`${STT_CONFIG.endpoint}?language=${STT_CONFIG.language}&prefer=${document.documentElement.lang || 'en'}`, { method: 'POST', body: form });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.detail || `STT HTTP ${res.status}`);
     this.language = json.language || null;

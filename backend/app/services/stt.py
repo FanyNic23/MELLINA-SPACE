@@ -115,12 +115,12 @@ class LocalWhisper:
         except SpeechUnavailable:
             pass  # aún no descargado: se cargará (o descargará) en la primera petición
 
-    def _transcribe(self, audio: bytes, language: str) -> Transcript:
+    def _transcribe(self, audio: bytes, language: str, prefer: Optional[str] = None) -> Transcript:
         model = self._load(not self.s.whisper_allow_download)
         started = time.perf_counter()
         pcm = decode_audio(audio)
         if language not in MISSION_PROMPTS:
-            language = self._detect(model, pcm)
+            language = self._detect(model, pcm, prefer)
         segments, info = model.transcribe(
             pcm, language=language, beam_size=self.s.whisper_beam_size, vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 400},
@@ -129,15 +129,22 @@ class LocalWhisper:
         return Transcript(text, info.language, "local", self.s.whisper_model, round(info.duration, 2),
                           round((time.perf_counter() - started) * 1000))
 
-    @staticmethod
-    def _detect(model, pcm) -> str:
+    # Para cambiar al idioma no preferido, Whisper debe estar muy seguro: las frases cortas
+    # ("¿cómo te llamas?") a veces se detectan mal y se transcribirían en el idioma equivocado.
+    SWITCH_CONFIDENCE = 0.8
+
+    @classmethod
+    def _detect(cls, model, pcm, prefer: Optional[str] = None) -> str:
         """Idioma de la orden ("auto"): solo compite entre los idiomas del asistente (inglés y español)."""
         _, _, probs = model.detect_language(pcm, vad_filter=True)
-        scores = dict(probs)
-        return max(MISSION_PROMPTS, key=lambda code: scores.get(code, 0.0))
+        scores = {code: dict(probs).get(code, 0.0) for code in MISSION_PROMPTS}
+        best = max(scores, key=scores.get)
+        if prefer in scores and best != prefer and scores[best] / (sum(scores.values()) or 1) < cls.SWITCH_CONFIDENCE:
+            return prefer
+        return best
 
-    async def transcribe(self, audio: bytes, language: str) -> Transcript:
-        return await asyncio.to_thread(self._transcribe, audio, language)
+    async def transcribe(self, audio: bytes, language: str, prefer: Optional[str] = None) -> Transcript:
+        return await asyncio.to_thread(self._transcribe, audio, language, prefer)
 
 
 class SpeechToText:
@@ -155,7 +162,8 @@ class SpeechToText:
                 "offline": True, "model": self.s.whisper_model, "local_loaded": self.local.loaded,
                 "last_error": self.local.last_error}
 
-    async def transcribe(self, audio: bytes, language: Optional[str] = None) -> Transcript:
+    async def transcribe(self, audio: bytes, language: Optional[str] = None, prefer: Optional[str] = None) -> Transcript:
+        """language: "es" | "en" | "auto"; prefer: idioma de la interfaz, que gana si la detección duda."""
         if not self.local.installed:
             raise SpeechUnavailable("Whisper local no está instalado (pip install -r backend/requirements.txt).")
-        return await self.local.transcribe(audio, language or self.s.stt_language)
+        return await self.local.transcribe(audio, language or self.s.stt_language, prefer)

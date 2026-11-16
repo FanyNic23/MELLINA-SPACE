@@ -208,7 +208,36 @@ const ES = {
     return parts.join(' ');
   },
 
-  unknown: () => 'No te entendí. Puedes pedirme salud, nave, ambiente o un diagnóstico completo.',
+  unknown: () =>
+    'Todavía no sé responder eso. Puedes preguntarme por tu salud, la nave, el ambiente, ' +
+    'pedirme un diagnóstico completo o preguntarme qué puedo hacer.',
+
+  // Conversación: se revisa antes que los temas clínicos (en orden; gana la primera que coincide).
+  chat: [
+    [/(como te llamas|cual es tu nombre|tu nombre|quien eres|presentate|que eres)/, 'name',
+      () => `Mi nombre es ${ASSISTANT_NAME}, una asistente creada para acompañarte en esta exploración. ` +
+        'Cuido tu salud, vigilo la nave y el ambiente, y te aviso antes de que algo se complique.'],
+    [/(quien te (creo|hizo|programo|diseno)|quien es tu creador|de donde (eres|vienes))/, 'creator',
+      () => 'Me creó el equipo de A-HAMS para el reto NASA Space Apps. Funciono completamente a bordo, ' +
+        'sin depender de la Tierra ni de internet.'],
+    [/(eres (real|humana|una persona|un robot|inteligente)|eres una (ia|inteligencia))/, 'nature',
+      () => `Soy una inteligencia de a bordo. No soy humana, pero estoy aquí para cuidarte durante toda la misión.`],
+    [/(que puedes hacer|que sabes hacer|en que (me )?(puedes )?ayudar|para que sirves|ayuda|ayudame|que haces)/, 'help',
+      () => 'Puedo decirte cómo está tu salud, darte un diagnóstico completo, informarte del ambiente y la radiación, ' +
+        'revisar la cabina y el enlace con la Tierra, y cambiar de tripulante. Solo pregúntame.'],
+    [/(como estas|que tal estas|como te encuentras|como te va)/, 'how',
+      (m) => `Funcionando al cien por ciento y lista para ayudarte, ${firstName(m.name)}. ¿Quieres que revise tu salud?`],
+    [/(quien soy|como me llamo|sabes quien soy)/, 'whoami',
+      (m) => `Eres ${m.name.replace(/^Dra?\.\s*/, '')}, ${m.role}. Hoy es el día ${m.missionDay} de tu misión.`],
+    [/(que hora es|me dices la hora)/, 'time',
+      () => `Son las ${new Date().toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' })}.`],
+    [/(que dia (es|de mision)|dia de (la )?mision|en que dia estamos|que sol)/, 'day',
+      (m) => `Hoy es el día ${m.missionDay} de la misión.`],
+    [/(gracias|te agradezco)/, 'thanks',
+      (m) => `De nada, ${firstName(m.name)}. Aquí estoy cuando me necesites.`],
+    [/(adios|hasta luego|nos vemos|chao|hasta pronto|buenas noches)/, 'bye',
+      (m) => `Hasta luego, ${firstName(m.name)}. Sigo vigilando por ti.`],
+  ],
 
   intents: {
     full: /(diagnostico|completo|todo|reporte|informe)/,
@@ -308,7 +337,36 @@ const EN = {
     return parts.join(' ');
   },
 
-  unknown: () => "I didn't catch that. You can ask me for health, ship, environment, or a full diagnosis.",
+  unknown: () =>
+    "I don't know how to answer that yet. You can ask me about your health, the ship, the environment, " +
+    'for a full diagnosis, or what I can do.',
+
+  // Conversation: checked before the clinical topics (in order; the first match wins).
+  chat: [
+    [/(what('s| is) your name|your name|who are you|introduce yourself|what are you)/, 'name',
+      () => `My name is ${ASSISTANT_NAME}, an assistant created to accompany you on this exploration. ` +
+        'I look after your health, keep an eye on the ship and the environment, and warn you before anything gets worse.'],
+    [/(who (created|made|built|programmed|designed) you|who is your creator|where are you from)/, 'creator',
+      () => 'I was created by the A-HAMS team for the NASA Space Apps challenge. I run entirely on board, ' +
+        'without depending on Earth or the internet.'],
+    [/(are you (real|human|a person|a robot|intelligent|an ai))/, 'nature',
+      () => "I'm an onboard intelligence. I'm not human, but I'm here to look after you for the whole mission."],
+    [/(what can you do|what do you do|how can you help|help me|\bhelp\b)/, 'help',
+      () => 'I can tell you how your health is, give you a full diagnosis, report the environment and radiation, ' +
+        'check the cabin and the link with Earth, and switch crew members. Just ask.'],
+    [/(how are you|how('s| is) it going|how do you feel)/, 'how',
+      (m) => `Running at one hundred percent and ready to help, ${firstName(m.name)}. Want me to check your health?`],
+    [/(who am i|what('s| is) my name|do you know who i am)/, 'whoami',
+      (m) => `You are ${m.name.replace(/^Dra?\.\s*/, '')}, ${m.role}. Today is day ${m.missionDay} of your mission.`],
+    [/(what time is it|what('s| is) the time|tell me the time)/, 'time',
+      () => `It's ${new Date().toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}.`],
+    [/(what day is (it|today)|mission day|which sol|what sol)/, 'day',
+      (m) => `Today is day ${m.missionDay} of the mission.`],
+    [/(thank you|thanks)/, 'thanks',
+      (m) => `You're welcome, ${firstName(m.name)}. I'm here whenever you need me.`],
+    [/(goodbye|bye|see you|good night)/, 'bye',
+      (m) => `See you later, ${firstName(m.name)}. I'll keep watching over you.`],
+  ],
 
   intents: {
     full: /(diagnos|full|complete|everything|summary)/,
@@ -324,10 +382,16 @@ const EN = {
 const TEXT = { es: ES, en: EN };
 const T = () => TEXT[lang];
 
+const SOFT_CHAT = new Set(['help', 'thanks', 'how']);
+
 function intentFrom(transcript, crew) {
-  const t = fold(transcript);
+  const t = fold(transcript).replace(/[¿?¡!.,;:]/g, ' ').replace(/\s+/g, ' ');
   const re = T().intents;
   const member = findMember(t, crew);
+  const chat = T().chat.find(([pattern]) => pattern.test(t));
+  // "Gracias, ¿cómo está mi salud?" o "ayúdame con la radiación": la consulta clínica gana a la cortesía.
+  const topic = ['full', 'environment', 'ship', 'health'].find((type) => re[type].test(t));
+  if (chat && !(topic && SOFT_CHAT.has(chat[1]))) return { type: 'chat', key: chat[1], member };
   for (const type of ['full', 'environment', 'ship', 'health']) {
     if (re[type].test(t)) return { type, member };
   }
@@ -350,5 +414,6 @@ export const MissionDiagnosis = {
   ship: (m, dtn) => T().ship(m, dtn),
   full: (m, dtn) => [T().health(m), T().environment(m), T().ship(m, dtn)].join(' '),
   unknown: () => T().unknown(),
+  chat: (key, m) => (T().chat.find(([, k]) => k === key) || [])[2]?.(m) ?? T().unknown(),
   intentFrom,
 };
