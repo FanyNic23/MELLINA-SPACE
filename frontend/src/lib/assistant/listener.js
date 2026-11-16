@@ -6,13 +6,14 @@
  * (Web Speech API), porque en Chrome envía el audio a servidores externos.
  *
  * API: const l = new VoiceListener({ onState }); await l.init(); const texto = await l.listen();
+ *      l.language es el idioma detectado en la última orden ('en' | 'es').
  *      l.stop() corta la grabación y transcribe lo grabado; l.cancel() lo descarta.
  *      onState recibe 'listening' | 'transcribing' | 'idle'.
  */
 export const STT_CONFIG = {
   endpoint: "/api/voice/stt",
   statusEndpoint: "/health",
-  language: 'es',     // lo cambia setLanguage(); se envía al Edge Core
+  language: 'auto',   // Whisper detecta si la orden es en inglés o en español
   threshold: 0.015,   // RMS a partir del cual se considera que hay voz
   silenceMs: 1100,    // silencio tras hablar que da la orden por terminada
   noSpeechMs: 5000,   // si nadie habla en este tiempo, se deja de escuchar
@@ -28,6 +29,7 @@ export class VoiceListener {
     this.engine = null;
     this.server = null;       // { provider, model, offline } del reconocimiento en el Edge Core
     this.busy = false;
+    this.language = null;     // idioma detectado en la última orden
     this._finish = null;
   }
 
@@ -62,16 +64,13 @@ export class VoiceListener {
       throw new Error('No hay motor de reconocimiento de voz disponible.');
     } finally {
       this.busy = false;
+    this.language = null;     // idioma detectado en la última orden
       this.onState('idle');
     }
   }
 
   stop() {
     if (this._finish) this._finish();
-  }
-
-  setLanguage(code) {
-    STT_CONFIG.language = code;
   }
 
   cancel() {
@@ -139,6 +138,7 @@ export class VoiceListener {
     const res = await fetch(`${STT_CONFIG.endpoint}?language=${STT_CONFIG.language}`, { method: 'POST', body: form });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(json.detail || `STT HTTP ${res.status}`);
+    this.language = json.language || null;
     return (json.text || '').trim();
   }
 }

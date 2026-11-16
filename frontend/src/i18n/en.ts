@@ -29,20 +29,6 @@ export const en = {
     offlineAfter: '; this screen updates on its own.',
   },
 
-  splash: {
-    skip: 'Click or press any key to skip',
-    initializing: 'INITIALIZING',
-    checks: {
-      core: 'Edge Core', sews: 'SEWS clinical engine', anatomy: '3D anatomy', voice: 'Mellina · local voice',
-      link: 'Earth link · DTN', env: 'Mission environment',
-    },
-    online: 'ONLINE',
-    assessed: (n: number) => `${n} CREW ASSESSED`,
-    ready: 'READY',
-    textOnly: 'TEXT ONLY',
-    aos: 'AOS · SIGNAL',
-    los: 'LOS · QUEUED',
-  },
 
   header: {
     tagline: 'Autonomous Health Assessment & Monitoring System',

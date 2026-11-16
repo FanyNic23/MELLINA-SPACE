@@ -118,13 +118,23 @@ class LocalWhisper:
     def _transcribe(self, audio: bytes, language: str) -> Transcript:
         model = self._load(not self.s.whisper_allow_download)
         started = time.perf_counter()
+        pcm = decode_audio(audio)
+        if language not in MISSION_PROMPTS:
+            language = self._detect(model, pcm)
         segments, info = model.transcribe(
-            decode_audio(audio), language=language, beam_size=self.s.whisper_beam_size, vad_filter=True,
+            pcm, language=language, beam_size=self.s.whisper_beam_size, vad_filter=True,
             vad_parameters={"min_silence_duration_ms": 400},
             initial_prompt=MISSION_PROMPTS.get(language), condition_on_previous_text=False)
         text = " ".join(seg.text.strip() for seg in segments).strip()
         return Transcript(text, info.language, "local", self.s.whisper_model, round(info.duration, 2),
                           round((time.perf_counter() - started) * 1000))
+
+    @staticmethod
+    def _detect(model, pcm) -> str:
+        """Idioma de la orden ("auto"): solo compite entre los idiomas del asistente (inglés y español)."""
+        _, _, probs = model.detect_language(pcm, vad_filter=True)
+        scores = dict(probs)
+        return max(MISSION_PROMPTS, key=lambda code: scores.get(code, 0.0))
 
     async def transcribe(self, audio: bytes, language: str) -> Transcript:
         return await asyncio.to_thread(self._transcribe, audio, language)

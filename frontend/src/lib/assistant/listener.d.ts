@@ -7,5 +7,6 @@ export class VoiceListener {
   listen(): Promise<string>
   stop(): void
   cancel(): void
-  setLanguage(code: 'es' | 'en'): void
+  /** Idioma detectado por Whisper en la última orden. */
+  language: string | null
 }

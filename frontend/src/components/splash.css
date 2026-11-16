@@ -62,45 +62,12 @@
 }
 @keyframes sp-glow { 50% { filter: drop-shadow(0 0 18px rgba(34, 211, 238, 0.55)); } }
 
-/* Nombre y lema */
+/* Nombre */
 .splash-word { width: 220px; height: auto; margin-top: 18px; fill: #f8fafc; animation: sp-wipe 0.7s cubic-bezier(.6, 0, .3, 1) 1.6s both; }
 @keyframes sp-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
-.splash-tagline {
-  margin-top: 12px; font: 500 9px/1.4 var(--font-mono); letter-spacing: 0.24em; white-space: nowrap; text-transform: uppercase; color: #64748b;
-  text-align: center; animation: sp-track 1s ease 2s both;
-}
-@keyframes sp-track { from { opacity: 0; letter-spacing: 0.5em; } }
-
-/* Secuencia de verificación */
-.splash-boot { width: 100%; margin-top: 30px; display: grid; gap: 7px; }
-.boot-line {
-  display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 8px;
-  font: 600 11px/1 var(--font-mono); letter-spacing: 0.08em; color: #475569;
-  opacity: 0; transform: translateX(-8px); transition: opacity 0.35s ease, transform 0.35s ease;
-}
-.boot-line.is-on { opacity: 1; transform: none; }
-.boot-icon { display: grid; place-items: center; color: #334155; }
-.boot-line.is-on:not(.is-ok) .boot-icon { color: #38bdf8; animation: spin 0.9s linear infinite; }
-.boot-line.is-ok .boot-icon { color: #2dd4bf; filter: drop-shadow(0 0 4px #2dd4bf); }
-.boot-line.is-on .boot-label { color: #94a3b8; }
-.boot-value { color: #22d3ee; letter-spacing: 0.12em; }
-.boot-line.is-ok .boot-value { animation: sp-flash 0.5s ease; }
-@keyframes sp-flash { 0% { opacity: 0; text-shadow: 0 0 12px #22d3ee; } 100% { opacity: 1; text-shadow: none; } }
 
 /* Barra de carga */
-.splash-progress { width: 100%; margin-top: 22px; animation: sp-fade 0.6s ease 0.4s both; }
-.splash-progress-meta {
-  display: flex; justify-content: space-between; margin-top: 8px;
-  font: 700 10px/1 var(--font-mono); letter-spacing: 0.2em; color: #64748b;
-}
-.splash-progress-meta b { color: #22d3ee; font-size: 12px; letter-spacing: 0.06em; }
-
-.splash-skip {
-  position: absolute; bottom: 42px; left: 0; right: 0; text-align: center;
-  font: 500 10px/1 var(--font-mono); letter-spacing: 0.18em; text-transform: uppercase; color: #334155;
-  animation: sp-fade 1s ease 2.4s both;
-}
-
+.splash-progress { width: 240px; margin-top: 40px; animation: sp-fade 0.6s ease 0.4s both; }
 @keyframes sp-fade { from { opacity: 0; } }
 @keyframes spin { to { transform: rotate(360deg); } }
 

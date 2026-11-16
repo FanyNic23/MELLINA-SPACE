@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     mission_path: str = "runtime/mission.json"
 
     # --- Reconocimiento de voz 100% local (Whisper en el Edge, faster-whisper)
-    stt_language: str = "es"
+    stt_language: str = "auto"  # auto: detecta inglés o español en cada orden
     whisper_model: str = "small"
     whisper_model_dir: str = "models/whisper"
     whisper_device: str = "cpu"

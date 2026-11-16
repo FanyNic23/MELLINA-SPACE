@@ -7,6 +7,7 @@ export interface Intent { type: string; member?: AssistantMember }
 export const MissionDiagnosis: {
   ASSISTANT_NAME: string
   setLanguage(code: 'es' | 'en'): void
+  readonly language: 'es' | 'en'
   loadMissionData(): Promise<MissionData>
   greeting(m: AssistantMember): string
   health(m: AssistantMember): string

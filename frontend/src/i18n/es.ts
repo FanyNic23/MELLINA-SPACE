@@ -31,20 +31,6 @@ export const es: Dict = {
     offlineAfter: '; esta pantalla se actualiza sola.',
   },
 
-  splash: {
-    skip: 'Haz clic o pulsa cualquier tecla para saltar',
-    initializing: 'INICIANDO',
-    checks: {
-      core: 'Edge Core', sews: 'Motor clínico SEWS', anatomy: 'Anatomía 3D', voice: 'Mellina · voz local',
-      link: 'Enlace Tierra · DTN', env: 'Entorno de misión',
-    },
-    online: 'EN LÍNEA',
-    assessed: n => `${n} TRIPULANTES EVALUADOS`,
-    ready: 'LISTA',
-    textOnly: 'SOLO TEXTO',
-    aos: 'AOS · CON SEÑAL',
-    los: 'LOS · EN COLA',
-  },
 
   header: {
     tagline: 'Autonomous Health Assessment & Monitoring System',
