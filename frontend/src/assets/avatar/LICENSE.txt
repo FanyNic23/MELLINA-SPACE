@@ -1,0 +1,4 @@
+head-scan.glb: "Infinite, 3D Head Scan" by Lee Perry-Smith (Infinite-Realities), based on a work at
+www.triplegangers.com. Licensed under Creative Commons Attribution 3.0 Unported
+(https://creativecommons.org/licenses/by/3.0/). Geometry taken from the three.js examples
+(examples/models/gltf/LeePerrySmith). Used unmodified; rendered as a hologram by HoloAvatar.js.

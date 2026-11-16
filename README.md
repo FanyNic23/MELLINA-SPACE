@@ -282,3 +282,7 @@ Gracias al **Patrón de Diseño Adapter** implementado en [`backend/app/services
 ## 📄 Licencia
 
 Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
+
+Recursos de terceros incluidos:
+- Anatomía 3D: **BodyParts3D 4.0** © The Database Center for Life Science (DBCLS), CC BY 4.0.
+- Holograma de Mellina: *Infinite, 3D Head Scan* de **Lee Perry-Smith** (Infinite-Realities, basado en www.triplegangers.com), [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). Ver `frontend/src/assets/avatar/LICENSE.txt`.
