@@ -71,3 +71,7 @@
 @keyframes seg-tip { 50% { opacity: 0.45; } }
 @keyframes dock-float { 50% { transform: translateY(-4px); } }
 @keyframes surgeon-alarm { 50% { background: rgba(239, 68, 68, 0.28); } }
+
+/* Idioma sugerido por Mellina: el botón del selector parpadea en amarillo hasta que se cambia */
+@keyframes lang-hint { 50% { box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.25); background: rgba(250, 204, 21, 0.28); } }
+.lang-hint { color: #000; background: #facc15; animation: lang-hint 0.9s ease-in-out infinite; }

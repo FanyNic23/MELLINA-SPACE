@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import { LANGS, setLang, useI18n } from '../i18n'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { getHint, LANGS, setLang, useI18n } from '../i18n'
+import { subscribeLang } from '../i18n/lang'
 import { useMission } from '../state/mission'
 import { BrandMark, BrandWord } from './Brand'
 import { Icon } from './Icon'
@@ -111,14 +112,18 @@ export function Header({ onCheckin, checkinDue, checkinSub }: { onCheckin: () =>
   )
 }
 
-/** Selector de idioma de toda la interfaz (inglés por defecto); también cambia la voz de Mellina. */
+/**
+ * Selector de idioma de toda la interfaz (inglés por defecto); también cambia la voz de Mellina.
+ * Si Mellina oye una orden en el otro idioma, ese botón se marca en amarillo hasta que se cambie.
+ */
 export function LanguageSwitch() {
   const { lang, t } = useI18n()
+  const hint = useSyncExternalStore(subscribeLang, getHint)
   return (
     <div className="flex gap-0.5 rounded-lg bg-space-950 p-1 font-mono text-[11px]" role="radiogroup" aria-label={t.language.label}>
       {LANGS.map(code => (
         <button key={code} type="button" role="radio" aria-checked={lang === code} onClick={() => setLang(code)}
-          className={`rounded-md px-2.5 py-1.5 font-bold transition ${lang === code ? 'bg-accent text-black' : 'text-slate-400 hover:text-white'}`}>
+          className={`rounded-md px-2.5 py-1.5 font-bold transition ${lang === code ? 'bg-accent text-black' : hint === code ? 'lang-hint' : 'text-slate-400 hover:text-white'}`}>
           {t.language[code]}
         </button>
       ))}

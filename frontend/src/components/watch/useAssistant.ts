@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Astronaut } from '../../api/types'
-import { useI18n } from '../../i18n'
+import { hintLang, useI18n } from '../../i18n'
 import { MissionDiagnosis as D, type AssistantMember, type MissionData } from '../../lib/assistant/diagnosis'
 import { HoloAvatar } from '../../lib/assistant/HoloAvatar'
 import { VoiceListener } from '../../lib/assistant/listener'
@@ -14,9 +14,8 @@ export interface LogLine { who: string; text: string; user?: boolean }
 
 /**
  * Asistente Mellina dentro del reloj, 100% local: holograma, voz del sistema, micrófono con Whisper
- * en el Edge Core y respuestas generadas con los datos del motor clínico. Entiende inglés y español
- * (Whisper detecta el idioma de cada orden) y responde en el idioma en que se le habló; al tocarla,
- * habla en el idioma activo de la interfaz.
+ * en el Edge Core y respuestas generadas con los datos del motor clínico. Habla y entiende el idioma
+ * activo de la interfaz; si oye una orden en el otro idioma, lo dice y marca ese idioma en el selector.
  */
 export function useAssistant(current: Astronaut | null, onSelectCrew: (id: string) => void) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -78,14 +77,11 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
     }
   }, [])
 
-  /** Idioma de las respuestas y de la voz (cambiar la voz corta lo que esté diciendo). */
-  const speakIn = useCallback((code: 'es' | 'en') => {
-    if (code === D.language && voice.current?.language === code) return
-    D.setLanguage(code)
-    voice.current?.setLanguage(code)
-  }, [])
-
-  useEffect(() => speakIn(lang), [lang, speakIn])
+  // Idioma de la voz y de las respuestas.
+  useEffect(() => {
+    D.setLanguage(lang)
+    voice.current?.setLanguage(lang)
+  }, [lang])
 
   useEffect(() => {
     void D.loadMissionData().then(m => { mission.current = m })
@@ -113,10 +109,9 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
 
   const tap = useCallback(() => {
     if (speaking) return voice.current?.stop()
-    speakIn(lang)
     void answer(greeted.current ? 'health' : 'greeting')
     greeted.current = true
-  }, [answer, speaking, speakIn, lang])
+  }, [answer, speaking])
 
   const talk = useCallback(async () => {
     const l = listener.current!
@@ -127,7 +122,10 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
       const said = await l.listen()
       if (!said) return setCaption(t.notHeard)
       setLog(lg => [{ who: t.you, text: said, user: true }, ...lg])
-      speakIn(l.language === 'es' || l.language === 'en' ? l.language : lang) // responde en el idioma hablado
+      if ((l.language === 'es' || l.language === 'en') && l.language !== lang) {
+        hintLang(l.language) // orden en el otro idioma: lo avisa y resalta ese idioma en el selector
+        return void say(t.otherLanguage)
+      }
       const intent = D.intentFrom(said, mission.current.crew)
       if (intent.member && intent.member.id !== current?.id) onSelectCrew(intent.member.id)
       if (intent.type === 'select' && intent.member) void say(D.greeting(intent.member))
@@ -136,7 +134,7 @@ export function useAssistant(current: Astronaut | null, onSelectCrew: (id: strin
     } catch (err) {
       setCaption((err as Error).name === 'NotAllowedError' ? t.micPermission : t.voiceFailed)
     }
-  }, [answer, current, onSelectCrew, say, speakIn, lang, t])
+  }, [answer, current, onSelectCrew, say, lang, t])
 
   const lookAt = useCallback((x: number, y: number) => avatar.current?.lookAt(x, y), [])
   const stop = useCallback(() => voice.current?.stop(), [])

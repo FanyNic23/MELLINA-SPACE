@@ -398,5 +398,6 @@ export const es: Dict = {
     you: 'TÚ',
     micPermission: 'Necesito permiso para usar el micrófono.',
     voiceFailed: 'No pude procesar tu voz.',
+    otherLanguage: 'No te entiendo, estoy en español. Puedes cambiar a inglés arriba.',
   },
 }

@@ -3,7 +3,7 @@ import { en, type Dict } from './en'
 import { es } from './es'
 import { getLang, subscribeLang, type Lang } from './lang'
 
-export { getLang, LANGS, setLang, type Lang } from './lang'
+export { getHint, getLang, hintLang, LANGS, setLang, type Lang } from './lang'
 export type { Dict } from './en'
 
 const DICTS: Record<Lang, Dict> = { en, es }

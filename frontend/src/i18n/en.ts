@@ -396,6 +396,7 @@ export const en = {
     you: 'YOU',
     micPermission: 'I need permission to use the microphone.',
     voiceFailed: 'I couldn’t process your voice.',
+    otherLanguage: 'I don’t understand you, I’m set to English. You can switch to Spanish at the top.',
   },
 }
 

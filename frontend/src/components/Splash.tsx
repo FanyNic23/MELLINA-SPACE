@@ -18,7 +18,8 @@ function vector(raw: string) {
 }
 
 /**
- * Arranque del sistema, solo con la marca: se dibuja con un trazo, se enciende y la barra se llena con
+ * Arranque del sistema, solo con la marca en horizontal: el emblema entra girando desde el fondo con
+ * un zoom, se dibuja con un trazo y se enciende, el nombre se despliega a su lado y la barra se llena con
  * lo que de verdad está listo (tripulación evaluada, anatomía 3D, Edge Core y entorno). Al terminar,
  * la pantalla se abre hacia el dashboard. Se salta con un clic o una tecla.
  */
@@ -70,20 +71,15 @@ export function Splash({ onDone }: { onDone: () => void }) {
       <div className="splash-corners" aria-hidden="true"><i /><i /><i /><i /></div>
 
       <div className="splash-core">
-        <div className="splash-emblem">
-          <svg className="splash-rings" viewBox="0 0 200 200" aria-hidden="true">
-            <circle className="ring ring-1" cx="100" cy="100" r="60" />
-            <circle className="ring ring-2" cx="100" cy="100" r="60" />
-            <circle className="orbit" cx="100" cy="100" r="92" />
-            <path className="orbit-arc" d="M100 8 a92 92 0 0 1 64 26" />
-          </svg>
-          <svg className="splash-mark" viewBox={mark.viewBox} aria-hidden="true">
-            <path className="mark-fill" d={mark.d} fillRule="evenodd" />
-            <path className="mark-stroke" d={mark.d} fillRule="evenodd" pathLength={1} />
-          </svg>
+        <div className="splash-logo">
+          <div className="splash-emblem">
+            <svg className="splash-mark" viewBox={mark.viewBox} aria-hidden="true">
+              <path className="mark-fill" d={mark.d} fillRule="evenodd" />
+              <path className="mark-stroke" d={mark.d} fillRule="evenodd" pathLength={1} />
+            </svg>
+          </div>
+          <svg className="splash-word" viewBox={word.viewBox} aria-hidden="true"><path d={word.d} fillRule="evenodd" /></svg>
         </div>
-
-        <svg className="splash-word" viewBox={word.viewBox} aria-hidden="true"><path d={word.d} fillRule="evenodd" /></svg>
 
         <div className="splash-progress">
           <SegBar pct={(done / STEPS) * 100} color="#22d3ee" variant="slant" segments={32} alarm={false} />
