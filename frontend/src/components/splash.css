@@ -15,20 +15,20 @@
 
 .splash-mark { width: 170px; height: auto; overflow: visible; fill: #f8fafc; }
 
-/* 1. La A se levanta desde su base: se estira hasta su forma y gana nitidez */
+/* 1. La A se levanta desde su base y se estira hasta su forma */
 .splash-mark .mark-a {
   transform-box: fill-box; transform-origin: 50% 100%;
   animation: sp-rise 1.1s cubic-bezier(.16, 1, .3, 1) 0.25s both;
 }
 @keyframes sp-rise {
-  0% { opacity: 0; transform: translateY(18%) scaleY(0.55) scaleX(1.08); filter: blur(6px); }
-  60% { opacity: 1; filter: blur(0); }
-  100% { opacity: 1; transform: none; filter: none; }
+  0% { opacity: 0; transform: translateY(18%) scaleY(0.55) scaleX(1.08); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: none; }
 }
 
 /* 2. La órbita rodea la A de izquierda a derecha */
 .splash-mark .orbit-sweep { animation: sp-sweep 1.2s cubic-bezier(.65, 0, .35, 1) 0.85s both; }
-@keyframes sp-sweep { from { transform: translateX(0); } to { transform: translateX(1250px); } }
+@keyframes sp-sweep { from { transform: translateX(0); } to { transform: translateX(2000px); } }
 
 /* 3. Al cerrarse, toda la marca se ilumina una vez */
 .splash-mark { animation: sp-settle 1.4s ease 1.9s both; }
@@ -55,5 +55,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .splash *, .splash { animation: none !important; transition-duration: 0.01ms !important; }
-  .splash-mark .orbit-sweep { transform: translateX(1250px); }
+  .splash-mark .orbit-sweep { transform: translateX(2000px); }
 }

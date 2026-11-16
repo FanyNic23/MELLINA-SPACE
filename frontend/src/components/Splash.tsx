@@ -73,11 +73,11 @@ export function Splash({ onDone }: { onDone: () => void }) {
           <defs>
             {/* Barrido de la órbita: un frente suave que avanza de izquierda a derecha */}
             <linearGradient id={`${maskId}-g`}>
-              <stop offset="0.8" stopColor="#fff" />
+              <stop offset="0.92" stopColor="#fff" />
               <stop offset="1" stopColor="#fff" stopOpacity="0" />
             </linearGradient>
             <mask id={maskId} maskUnits="userSpaceOnUse">
-              <rect className="orbit-sweep" x="-1100" y="0" width="1100" height="480" fill={`url(#${maskId}-g)`} />
+              <rect className="orbit-sweep" x="-2000" y="-100" width="2000" height="700" fill={`url(#${maskId}-g)`} />
             </mask>
           </defs>
           <path className="mark-a" d={parts.a} fillRule="evenodd" />
